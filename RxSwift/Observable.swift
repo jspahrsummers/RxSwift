@@ -8,22 +8,31 @@
 
 import Foundation
 
-class Observable<T: AnyObject, O: Observer>: Stream<T> {
-	typealias EventType = AnyObject
+class Observable<T>: Stream<T> {
+	typealias EventType = T
 	
-	var observers: O[]
+	let create: Observer -> ()
 	
-	init() {
-		observers = []
-	}
-
-	func addObserver(observer: O) {
-		observers += observer
+	init(create: Observer -> ()) {
+		self.create = create
 	}
 	
-	func removeObserver(observer: O) {
-		observers = observers.filter({
-			observer == $0
+	let observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
+	var observers: Observer[] = []
+ 
+	func addObserver(observer: Observer) {
+		dispatch_sync(observerQueue, {
+			self.observers.append(observer)
+		})
+		
+		self.create(observer)
+	}
+	
+	func removeObserver(observer: Observer) {
+		dispatch_sync(observerQueue, {
+			self.observers = self.observers.filter({
+				$0 === observer
+			})
 		})
 	}
 }

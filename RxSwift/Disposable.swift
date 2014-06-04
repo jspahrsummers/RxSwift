@@ -9,5 +9,18 @@
 import Foundation
 
 protocol Disposable {
-	func dispose(seq: Sequence)
+	func dispose()
+}
+
+class ActionDisposable: Disposable {
+	var action: (() -> ())?
+
+	init(action: () -> ()) {
+		self.action = action
+	}
+	
+	func dispose() {
+		self.action?()
+		self.action = nil
+	}
 }
