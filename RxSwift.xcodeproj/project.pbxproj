@@ -16,6 +16,7 @@
 		D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */; };
 		D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA04193D2DB400C9CAF7 /* Observer.swift */; };
 		D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */; };
+		D0D18740193E95EB00F937F2 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1873F193E95EB00F937F2 /* Stream.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -41,6 +42,7 @@
 		D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Disposable.swift; sourceTree = "<group>"; };
 		D0CBBA04193D2DB400C9CAF7 /* Observer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observer.swift; sourceTree = "<group>"; };
 		D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observable.swift; sourceTree = "<group>"; };
+		D0D1873F193E95EB00F937F2 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
 				D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */,
 				D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */,
+				D0D1873F193E95EB00F937F2 /* Stream.swift */,
 				D0CBB9E2193D1D1500C9CAF7 /* Supporting Files */,
 			);
 			path = RxSwift;
@@ -234,6 +237,7 @@
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
 				D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */,
 				D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */,
+				D0D18740193E95EB00F937F2 /* Stream.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -427,6 +431,7 @@
 				D0CBB9F7193D1D1500C9CAF7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 		D0CBB9F8193D1D1500C9CAF7 /* Build configuration list for PBXNativeTarget "RxSwiftTests" */ = {
 			isa = XCConfigurationList;
@@ -435,6 +440,7 @@
 				D0CBB9FA193D1D1500C9CAF7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};

@@ -8,35 +8,22 @@
 
 import Foundation
 
-protocol Observer {
-	typealias EventType: AnyObject
-
-	func send(event: Event<EventType>)
-}
-
-protocol Observable {
-	func addObserver<O: Observer>(observer: O)
-	func removeObserver<O: Observer>(observer: O)
-}
-
-class SimpleObservable<T: AnyObject> : Observable {
-	typealias EventType = T
-
-	var observers: Observer[]
+class Observable<T: AnyObject, O: Observer>: Stream<T> {
+	typealias EventType = AnyObject
+	
+	var observers: O[]
 	
 	init() {
 		observers = []
 	}
 
-	func send(event: Event<T>) {
-		for o: Observer in observers {
-			o.send(event)
-		}
+	func addObserver(observer: O) {
+		observers += observer
 	}
 	
-	func addObserver<O: Observer>(observer: O) {
-	}
-	
-	func removeObserver<O: Observer>(observer: O) {
+	func removeObserver(observer: O) {
+		observers = observers.filter({
+			observer == $0
+		})
 	}
 }

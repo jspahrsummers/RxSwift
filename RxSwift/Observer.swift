@@ -8,3 +8,8 @@
 
 import Foundation
 
+protocol Observer: Equatable {
+	typealias EventType: AnyObject
+
+	func send(Event<AnyObject>)
+}
