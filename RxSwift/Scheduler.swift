@@ -18,3 +18,25 @@ class ImmediateScheduler: Scheduler {
 		return nil
 	}
 }
+
+class QueueScheduler: Scheduler {
+	let queue = dispatch_queue_create("com.github.RxSwift.QueueScheduler", DISPATCH_QUEUE_SERIAL)
+
+	init(_ queue: dispatch_queue_t) {
+		dispatch_set_target_queue(self.queue, queue)
+	}
+	
+	func schedule(work: () -> ()) -> Disposable? {
+		let d = SimpleDisposable()
+	
+		dispatch_async(self.queue, {
+			if d.disposed {
+				return
+			}
+			
+			work()
+		})
+		
+		return d
+	}
+}

@@ -12,6 +12,14 @@ protocol Disposable {
 	func dispose()
 }
 
+class SimpleDisposable: Disposable {
+	var disposed = false
+	
+	func dispose() {
+		disposed = true
+	}
+}
+
 class ActionDisposable: Disposable {
 	var action: (() -> ())?
 
