@@ -8,6 +8,7 @@
 
 import Foundation
 
+@class_protocol
 protocol Disposable {
 	var disposed: Bool { get }
 
@@ -24,27 +25,62 @@ class SimpleDisposable: Disposable {
 }
 
 class ActionDisposable: Disposable {
-	let lock = SpinLock()
-	var action: (() -> ())?
+	var action: Atomic<(() -> ())?>
 	
 	var disposed: Bool {
 		get {
-			return lock.withLock {
-				return (self.action == nil)
-			}
+			return self.action.value == nil
 		}
 	}
 
 	init(action: () -> ()) {
-		self.action = action
+		self.action = Atomic(action)
 	}
 	
 	func dispose() {
-		lock.lock()
-		let action = self.action
-		self.action = nil
-		lock.unlock()
+		self.action.value?()
+	}
+}
+
+class CompositeDisposable: Disposable {
+	var disposables: Atomic<Disposable[]?> = Atomic([])
+	
+	var disposed: Bool {
+		get {
+			return self.disposables.value == nil
+		}
+	}
+	
+	func dispose() {
+		if let ds = self.disposables.replace(nil) {
+			for d in ds {
+				d.dispose()
+			}
+		}
+	}
+	
+	func addDisposable(d: Disposable) {
+		let shouldDispose: Bool = self.disposables.withValue {
+			if var ds = $0 {
+				ds.append(d)
+				return false
+			} else {
+				return true
+			}
+		}
 		
-		action?()
+		if shouldDispose {
+			d.dispose()
+		}
+	}
+	
+	func removeDisposable(d: Disposable) {
+		self.disposables.modify {
+			if let ds = $0 {
+				return removeObjectIdenticalTo(d, fromArray: ds)
+			} else {
+				return nil
+			}
+		}
 	}
 }

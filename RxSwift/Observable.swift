@@ -30,9 +30,7 @@ class Observable<T>: Stream<T> {
 	
 	func removeObserver(observer: Observer) {
 		dispatch_sync(observerQueue, {
-			self.observers = self.observers.filter({
-				$0 === observer
-			})
+			self.observers = removeObjectIdenticalTo(observer, fromArray: self.observers)
 		})
 	}
 }

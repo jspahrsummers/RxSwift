@@ -38,4 +38,21 @@ class Atomic<T> {
 		
 		return oldValue
 	}
+	
+	func modify(action: T -> T) -> T {
+		lock.lock()
+		let newValue = action(self.wrapper.value)
+		self.wrapper.value = newValue
+		lock.unlock()
+		
+		return newValue
+	}
+	
+	func withValue<U>(action: T -> U) -> U {
+		lock.lock()
+		let result = action(self.wrapper.value)
+		lock.unlock()
+		
+		return result
+	}
 }

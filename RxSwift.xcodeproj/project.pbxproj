@@ -12,6 +12,7 @@
 		D02164F61947B3E900D34273 /* SpinLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F51947B3E900D34273 /* SpinLock.swift */; };
 		D02164F81947BC4500D34273 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F71947BC4500D34273 /* Atomic.swift */; };
 		D02164FA1947C1AB00D34273 /* ObjectWrapper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F91947C1AB00D34273 /* ObjectWrapper.swift */; };
+		D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164FB1947C91C00D34273 /* ArrayExtensions.swift */; };
 		D0CBB9E5193D1D1500C9CAF7 /* RxSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CBB9EB193D1D1500C9CAF7 /* RxSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */; };
 		D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */; };
@@ -69,6 +70,7 @@
 		D02164F51947B3E900D34273 /* SpinLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpinLock.swift; sourceTree = "<group>"; };
 		D02164F71947BC4500D34273 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		D02164F91947C1AB00D34273 /* ObjectWrapper.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ObjectWrapper.swift; sourceTree = "<group>"; };
+		D02164FB1947C91C00D34273 /* ArrayExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArrayExtensions.swift; sourceTree = "<group>"; };
 		D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RxSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CBB9E3193D1D1500C9CAF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RxSwift.h; sourceTree = "<group>"; };
@@ -147,6 +149,7 @@
 			isa = PBXGroup;
 			children = (
 				D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */,
+				D02164FB1947C91C00D34273 /* ArrayExtensions.swift */,
 				D02164F71947BC4500D34273 /* Atomic.swift */,
 				D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */,
 				D0D18744193EBCFC00F937F2 /* Enumerator.swift */,
@@ -334,6 +337,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */,
 				D02164F61947B3E900D34273 /* SpinLock.swift in Sources */,
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */,
