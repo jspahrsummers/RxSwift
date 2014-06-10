@@ -6,7 +6,7 @@
 //  Copyright (c) 2014 GitHub. All rights reserved.
 //
 
-#import <Cocoa/Cocoa.h>
+#import <Foundation/Foundation.h>
 
 //! Project version number for RxSwift.
 FOUNDATION_EXPORT double RxSwiftVersionNumber;
