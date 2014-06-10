@@ -26,6 +26,14 @@ class QueueScheduler: Scheduler {
 		dispatch_set_target_queue(self.queue, queue)
 	}
 	
+	convenience init(_ priority: CLong) {
+		self.init(dispatch_get_global_queue(priority, 0))
+	}
+	
+	convenience init() {
+		self.init(DISPATCH_QUEUE_PRIORITY_DEFAULT)
+	}
+	
 	func schedule(work: () -> ()) -> Disposable? {
 		let d = SimpleDisposable()
 	
