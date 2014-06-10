@@ -8,9 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		D02164EE1947ADB300D34273 /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02164E61947AD9800D34273 /* Quick.framework */; };
+		D02164F41947AEA900D34273 /* PromiseSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F31947AEA900D34273 /* PromiseSpec.swift */; };
 		D0CBB9E5193D1D1500C9CAF7 /* RxSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CBB9EB193D1D1500C9CAF7 /* RxSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */; };
-		D0CBB9F2193D1D1500C9CAF7 /* RxSwiftTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9F1193D1D1500C9CAF7 /* RxSwiftTests.swift */; };
 		D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */; };
 		D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FD193D236A00C9CAF7 /* Event.swift */; };
 		D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */; };
@@ -62,12 +62,12 @@
 
 /* Begin PBXFileReference section */
 		D02164DE1947AD9800D34273 /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick.xcodeproj; sourceTree = "<group>"; };
+		D02164F31947AEA900D34273 /* PromiseSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PromiseSpec.swift; sourceTree = "<group>"; };
 		D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RxSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CBB9E3193D1D1500C9CAF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RxSwift.h; sourceTree = "<group>"; };
 		D0CBB9EA193D1D1500C9CAF7 /* RxSwiftTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RxSwiftTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CBB9F0193D1D1500C9CAF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		D0CBB9F1193D1D1500C9CAF7 /* RxSwiftTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RxSwiftTests.swift; sourceTree = "<group>"; };
 		D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		D0CBB9FD193D236A00C9CAF7 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
@@ -166,7 +166,7 @@
 		D0CBB9EE193D1D1500C9CAF7 /* RxSwiftTests */ = {
 			isa = PBXGroup;
 			children = (
-				D0CBB9F1193D1D1500C9CAF7 /* RxSwiftTests.swift */,
+				D02164F31947AEA900D34273 /* PromiseSpec.swift */,
 				D0CBB9EF193D1D1500C9CAF7 /* Supporting Files */,
 			);
 			path = RxSwiftTests;
@@ -341,7 +341,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D0CBB9F2193D1D1500C9CAF7 /* RxSwiftTests.swift in Sources */,
+				D02164F41947AEA900D34273 /* PromiseSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -477,6 +477,7 @@
 		D0CBB9F9193D1D1500C9CAF7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
@@ -490,12 +491,14 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks @loader_path/../Frameworks";
 				METAL_ENABLE_DEBUG_INFO = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
 		D0CBB9FA193D1D1500C9CAF7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
 				COMBINE_HIDPI_IMAGES = YES;
 				FRAMEWORK_SEARCH_PATHS = (
 					"$(DEVELOPER_FRAMEWORKS_DIR)",
