@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D02164EE1947ADB300D34273 /* Quick.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D02164E61947AD9800D34273 /* Quick.framework */; };
 		D02164F41947AEA900D34273 /* PromiseSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F31947AEA900D34273 /* PromiseSpec.swift */; };
+		D02164F61947B3E900D34273 /* SpinLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F51947B3E900D34273 /* SpinLock.swift */; };
 		D0CBB9E5193D1D1500C9CAF7 /* RxSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CBB9EB193D1D1500C9CAF7 /* RxSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */; };
 		D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */; };
@@ -63,6 +64,7 @@
 /* Begin PBXFileReference section */
 		D02164DE1947AD9800D34273 /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick.xcodeproj; sourceTree = "<group>"; };
 		D02164F31947AEA900D34273 /* PromiseSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PromiseSpec.swift; sourceTree = "<group>"; };
+		D02164F51947B3E900D34273 /* SpinLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpinLock.swift; sourceTree = "<group>"; };
 		D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RxSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CBB9E3193D1D1500C9CAF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = RxSwift.h; sourceTree = "<group>"; };
@@ -149,6 +151,7 @@
 				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
 				D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */,
 				D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */,
+				D02164F51947B3E900D34273 /* SpinLock.swift */,
 				D0D1873F193E95EB00F937F2 /* Stream.swift */,
 				D0CBB9E2193D1D1500C9CAF7 /* Supporting Files */,
 			);
@@ -325,6 +328,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D02164F61947B3E900D34273 /* SpinLock.swift in Sources */,
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */,
 				D0D18745193EBCFC00F937F2 /* Enumerator.swift in Sources */,
