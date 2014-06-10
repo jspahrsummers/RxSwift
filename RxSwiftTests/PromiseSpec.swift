@@ -7,11 +7,20 @@
 //
 
 import Quick
+import RxSwift
 
 class PromiseSpec: QuickSpec {
 	override class func exampleGroups() {
-		it("should pass") {
-			expect(true).to.beTrue()
+		var promise: Promise<Int>!
+		
+		beforeEach {
+			promise = Promise {
+				return 5
+			}
+		}
+	
+		it("should block and return a result") {
+            expect(promise.result()).to.equal(5)
 		}
 	}
 }
