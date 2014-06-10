@@ -11,6 +11,14 @@ import Foundation
 class SpinLock {
 	var spinlock = OS_SPINLOCK_INIT
 	
+	func lock() {
+		withUnsafePointer(&spinlock, OSSpinLockLock)
+	}
+	
+	func unlock() {
+		withUnsafePointer(&spinlock, OSSpinLockUnlock)
+	}
+	
 	func withLock<T>(action: () -> T) -> T {
 		withUnsafePointer(&spinlock, OSSpinLockLock)
 		let result = action()
