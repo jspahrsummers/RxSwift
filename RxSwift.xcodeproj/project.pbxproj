@@ -22,8 +22,6 @@
 		D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA04193D2DB400C9CAF7 /* Observer.swift */; };
 		D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */; };
 		D0D18740193E95EB00F937F2 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1873F193E95EB00F937F2 /* Stream.swift */; };
-		D0D18743193EBCF100F937F2 /* Enumerable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D18742193EBCF100F937F2 /* Enumerable.swift */; };
-		D0D18745193EBCFC00F937F2 /* Enumerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D18744193EBCFC00F937F2 /* Enumerator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -83,8 +81,6 @@
 		D0CBBA04193D2DB400C9CAF7 /* Observer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observer.swift; sourceTree = "<group>"; };
 		D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observable.swift; sourceTree = "<group>"; };
 		D0D1873F193E95EB00F937F2 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
-		D0D18742193EBCF100F937F2 /* Enumerable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Enumerable.swift; sourceTree = "<group>"; };
-		D0D18744193EBCFC00F937F2 /* Enumerator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Enumerator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -207,8 +203,6 @@
 		D0F8CF161948E53200170790 /* Streams */ = {
 			isa = PBXGroup;
 			children = (
-				D0D18744193EBCFC00F937F2 /* Enumerator.swift */,
-				D0D18742193EBCF100F937F2 /* Enumerable.swift */,
 				D0CBBA04193D2DB400C9CAF7 /* Observer.swift */,
 				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
 				D0D1873F193E95EB00F937F2 /* Stream.swift */,
@@ -382,9 +376,7 @@
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
-				D0D18745193EBCFC00F937F2 /* Enumerator.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
-				D0D18743193EBCF100F937F2 /* Enumerable.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
 				D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */,
 				D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */,
