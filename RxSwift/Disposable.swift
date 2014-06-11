@@ -152,6 +152,11 @@ class SerialDisposable: Disposable {
 		}
 	}
 
+	convenience init(_ disposable: Disposable) {
+		self.init()
+		self.innerDisposable = disposable
+	}
+
 	func dispose() {
 		self.innerDisposable = nil
 	}

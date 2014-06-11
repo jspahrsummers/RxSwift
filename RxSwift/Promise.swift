@@ -119,15 +119,13 @@ class Promise<T> {
 				}
 			
 			default:
-				let disposable = CompositeDisposable()
+				let disposable = SerialDisposable()
 			
 				// TODO: Offer a way to remove this from the array too?
 				self.finishedActions.append {
-					let schedulerDisposable = scheduler.schedule {
+					disposable.innerDisposable = scheduler.schedule {
 						action(self.result())
 					}
-					
-					disposable.addDisposable(schedulerDisposable)
 				}
 				
 				return disposable
