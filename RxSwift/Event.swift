@@ -12,4 +12,16 @@ enum Event<T> {
 	case Next(Box<T>)
 	case Error(NSError)
 	case Completed
+	
+	var isTerminating: Bool {
+		get {
+			switch self {
+			case .Next:
+				return false
+			
+			default:
+				return true
+			}
+		}
+	}
 }

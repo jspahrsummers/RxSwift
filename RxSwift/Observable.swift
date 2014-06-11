@@ -36,4 +36,11 @@ class Observable<T>: Stream<T> {
 		})
 	}
 	*/
+
+	func replay() -> AsyncSequence<T> {
+		let s = AsyncSequence<T>()
+		addObserver(s)
+		
+		return s
+	}
 }
