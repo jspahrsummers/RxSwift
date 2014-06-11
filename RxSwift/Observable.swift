@@ -39,4 +39,26 @@ class Observable<T>: Stream<T> {
 		let s = AsyncSequence<T>()
 		return (s, observe(s))
 	}
+	
+	override class func empty() -> Stream<T> {
+		return Observable { observer in
+			observer.send(Event.Completed)
+		}
+	}
+	
+	override class func single(T) -> Stream<T> {
+		return Stream()
+	}
+	
+	override class func never() -> Stream<T> {
+		return Stream()
+	}
+
+	override func map<U: AnyObject>(transform: T -> U) -> Stream<U> {
+		return .empty()
+	}
+	
+	override func flatten<U: AnyObject>() -> Stream<U> {
+		return .empty()
+	}
 }
