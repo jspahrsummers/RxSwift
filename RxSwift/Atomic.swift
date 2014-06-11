@@ -11,23 +11,23 @@ import Foundation
 class Atomic<T> {
 	let lock = SpinLock()
 	
-	var wrapper: () -> T
+	let box: MutableBox<T>
 	var value: T {
 		get {
 			return lock.withLock {
-				return self.wrapper()
+				return self.box
 			}
 		}
 	
 		set(newValue) {
 			lock.lock()
-			self.wrapper = { newValue }
+			self.box.value = newValue
 			lock.unlock()
 		}
 	}
 	
 	init(_ value: T) {
-		self.wrapper = { value }
+		self.box = MutableBox(value)
 	}
 	
 	func replace(newValue: T) -> T {
@@ -36,8 +36,8 @@ class Atomic<T> {
 	
 	func modify(action: T -> T) -> T {
 		lock.lock()
-		let newValue = action(self.wrapper())
-		self.wrapper = { newValue }
+		let newValue = action(self.box)
+		self.box.value = newValue
 		lock.unlock()
 		
 		return newValue
@@ -45,7 +45,7 @@ class Atomic<T> {
 	
 	func withValue<U>(action: T -> U) -> U {
 		lock.lock()
-		let result = action(self.wrapper())
+		let result = action(self.box)
 		lock.unlock()
 		
 		return result

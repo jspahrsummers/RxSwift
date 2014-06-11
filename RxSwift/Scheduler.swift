@@ -8,6 +8,7 @@
 
 import Foundation
 
+@class_protocol
 protocol Scheduler {
 	func schedule(work: () -> ()) -> Disposable?
 }

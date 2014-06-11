@@ -8,8 +8,8 @@
 
 import Foundation
 
-enum Event<T: AnyObject> {
-	case Next(T)
+enum Event<T> {
+	case Next(Box<T>)
 	case Error(NSError)
 	case Completed
 }

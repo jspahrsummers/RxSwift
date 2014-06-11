@@ -8,9 +8,8 @@
 
 import Foundation
 
-@class_protocol
 protocol Observer {
-	typealias EventType: AnyObject
+	typealias EventType
 
-	func send(Event<EventType>)
+	mutating func send(Event<EventType>)
 }

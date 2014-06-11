@@ -11,7 +11,7 @@ import Foundation
 enum PromiseState<T> {
 	case Unresolved(() -> T)
 	case Resolving
-	case Done(() -> T)
+	case Done(Box<T>)
 	
 	var isResolving: Bool {
 		get {
@@ -73,7 +73,7 @@ class Promise<T> {
 			let result = maybeWork!()
 			
 			withLock(self.condition) { () -> () in
-				self.state = PromiseState.Done { result }
+				self.state = PromiseState.Done(Box(result))
 			}
 		}
 	}
@@ -90,7 +90,7 @@ class Promise<T> {
 				return (work, nil)
 				
 			case let .Done(result):
-				return (nil, result())
+				return (nil, result)
 				
 			default:
 				return (nil, nil)
@@ -101,7 +101,7 @@ class Promise<T> {
 			let result = work()
 
 			withLock(self.condition) { () -> () in
-				self.state = PromiseState.Done { () -> T in result }
+				self.state = PromiseState.Done(Box(result))
 			}
 
 			return result
@@ -115,7 +115,7 @@ class Promise<T> {
 			switch self.state {
 			case let .Done(result):
 				return scheduler.schedule {
-					action(result())
+					action(result)
 				}
 			
 			default:

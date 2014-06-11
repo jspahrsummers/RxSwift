@@ -28,9 +28,12 @@ class Observable<T>: Stream<T> {
 		self.create(observer)
 	}
 	
+	// TODO
+	/*
 	func removeObserver(observer: Observer) {
 		dispatch_sync(observerQueue, {
 			self.observers = removeObjectIdenticalTo(observer, fromArray: self.observers)
 		})
 	}
+	*/
 }

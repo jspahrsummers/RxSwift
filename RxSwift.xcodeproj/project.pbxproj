@@ -22,6 +22,7 @@
 		D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA04193D2DB400C9CAF7 /* Observer.swift */; };
 		D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */; };
 		D0D18740193E95EB00F937F2 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1873F193E95EB00F937F2 /* Stream.swift */; };
+		D0F8CF1E1948F33600170790 /* Box.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8CF1D1948F33600170790 /* Box.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -81,6 +82,7 @@
 		D0CBBA04193D2DB400C9CAF7 /* Observer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observer.swift; sourceTree = "<group>"; };
 		D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observable.swift; sourceTree = "<group>"; };
 		D0D1873F193E95EB00F937F2 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
+		D0F8CF1D1948F33600170790 /* Box.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Box.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -213,6 +215,7 @@
 		D0F8CF171948E53E00170790 /* Value Types */ = {
 			isa = PBXGroup;
 			children = (
+				D0F8CF1D1948F33600170790 /* Box.swift */,
 				D0CBB9FD193D236A00C9CAF7 /* Event.swift */,
 			);
 			name = "Value Types";
@@ -376,6 +379,7 @@
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
+				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
 				D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */,
