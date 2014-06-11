@@ -21,11 +21,15 @@ class Stream<T> {
 		return Stream()
 	}
 
-	func map<U: AnyObject>(transform: T -> U) -> Stream<U> {
+	func map<U>(transform: T -> U) -> Stream<U> {
 		return .empty()
 	}
 	
-	func flatten<U: AnyObject>() -> Stream<U> {
+	func flatten<U>() -> Stream<U> {
 		return .empty()
+	}
+	
+	@final func flattenMap<U>(transform: T -> Stream<U>) -> Stream<U> {
+		return self.map(transform).flatten()
 	}
 }
