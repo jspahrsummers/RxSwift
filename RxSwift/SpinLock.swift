@@ -8,18 +8,18 @@
 
 import Foundation
 
-class SpinLock {
+struct SpinLock {
 	var spinlock = OS_SPINLOCK_INIT
 	
-	func lock() {
+	mutating func lock() {
 		withUnsafePointer(&spinlock, OSSpinLockLock)
 	}
 	
-	func unlock() {
+	mutating func unlock() {
 		withUnsafePointer(&spinlock, OSSpinLockUnlock)
 	}
 	
-	func withLock<T>(action: () -> T) -> T {
+	mutating func withLock<T>(action: () -> T) -> T {
 		withUnsafePointer(&spinlock, OSSpinLockLock)
 		let result = action()
 		withUnsafePointer(&spinlock, OSSpinLockUnlock)
@@ -27,7 +27,7 @@ class SpinLock {
 		return result
 	}
 	
-	func tryLock<T>(action: () -> T) -> T? {
+	mutating func tryLock<T>(action: () -> T) -> T? {
 		if !withUnsafePointer(&spinlock, OSSpinLockTry) {
 			return nil
 		}
