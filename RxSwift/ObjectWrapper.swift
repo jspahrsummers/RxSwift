@@ -8,19 +8,17 @@
 
 import Foundation
 
-class ObjectWrapper<T> {
+struct ObjectWrapper<T> {
 	let backingVar: T[]
 	
-	var value: T {
-		get {
-			return backingVar[0]
-		}
-	
-		set(newValue) {
-			backingVar[0] = newValue
-		}
+	func value() -> T {
+		return backingVar[0]
 	}
-
+  
+	mutating func set(newValue: T) {
+		backingVar[0] = newValue
+	}
+	
 	init(_ value: T) {
 		self.backingVar = [value]
 	}
