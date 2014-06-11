@@ -10,30 +10,30 @@ import Foundation
 
 class Atomic<T> {
 	let lock = SpinLock()
-	let wrapper: ObjectWrapper<T>
 	
+	var wrapper: () -> T
 	var value: T {
 		get {
 			return lock.withLock {
-				return self.wrapper.value
+				return self.wrapper()
 			}
 		}
 	
 		set(newValue) {
 			lock.lock()
-			self.wrapper.value = newValue
+			self.wrapper = { newValue }
 			lock.unlock()
 		}
 	}
 	
 	init(_ value: T) {
-		self.wrapper = ObjectWrapper(value)
+		self.wrapper = { value }
 	}
 	
 	func replace(newValue: T) -> T {
 		lock.lock()
-		let oldValue = self.wrapper.value
-		self.wrapper.value = newValue
+		let oldValue = self.wrapper()
+		self.wrapper = { newValue }
 		lock.unlock()
 		
 		return oldValue
@@ -41,8 +41,8 @@ class Atomic<T> {
 	
 	func modify(action: T -> T) -> T {
 		lock.lock()
-		let newValue = action(self.wrapper.value)
-		self.wrapper.value = newValue
+		let newValue = action(self.wrapper())
+		self.wrapper = { newValue }
 		lock.unlock()
 		
 		return newValue
@@ -50,7 +50,7 @@ class Atomic<T> {
 	
 	func withValue<U>(action: T -> U) -> U {
 		lock.lock()
-		let result = action(self.wrapper.value)
+		let result = action(self.wrapper())
 		lock.unlock()
 		
 		return result
