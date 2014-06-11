@@ -19,7 +19,7 @@ class SimpleDisposable: Disposable {
 	var disposed = false
 	
 	func dispose() {
-        disposed = true
+        self.disposed = true
         OSMemoryBarrier()
 	}
 }
@@ -59,10 +59,14 @@ class CompositeDisposable: Disposable {
 		}
 	}
 	
-	func addDisposable(d: Disposable) {
+	func addDisposable(d: Disposable?) {
+		if d == nil {
+			return
+		}
+	
 		let shouldDispose: Bool = self.disposables.withValue {
 			if var ds = $0 {
-				ds.append(d)
+				ds.append(d!)
 				return false
 			} else {
 				return true
@@ -70,14 +74,18 @@ class CompositeDisposable: Disposable {
 		}
 		
 		if shouldDispose {
-			d.dispose()
+			d!.dispose()
 		}
 	}
 	
-	func removeDisposable(d: Disposable) {
+	func removeDisposable(d: Disposable?) {
+		if d == nil {
+			return
+		}
+	
 		self.disposables.modify {
 			if let ds = $0 {
-				return removeObjectIdenticalTo(d, fromArray: ds)
+				return removeObjectIdenticalTo(d!, fromArray: ds)
 			} else {
 				return nil
 			}
@@ -85,8 +93,8 @@ class CompositeDisposable: Disposable {
 	}
 }
 
-class ScopedDisposable<T: Disposable>: Disposable {
-	let innerDisposable: T
+class ScopedDisposable: Disposable {
+	let innerDisposable: Disposable
 	
 	var disposed: Bool {
 		get {
@@ -94,7 +102,7 @@ class ScopedDisposable<T: Disposable>: Disposable {
 		}
 	}
 	
-	init(_ disposable: T) {
+	init(_ disposable: Disposable) {
 		self.innerDisposable = disposable
 	}
 	
