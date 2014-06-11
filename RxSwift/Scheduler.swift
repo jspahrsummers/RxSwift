@@ -22,6 +22,16 @@ class ImmediateScheduler: Scheduler {
 class QueueScheduler: Scheduler {
 	let queue = dispatch_queue_create("com.github.RxSwift.QueueScheduler", DISPATCH_QUEUE_SERIAL)
 
+	struct Shared {
+		static let mainThreadScheduler = QueueScheduler(dispatch_get_main_queue())
+	}
+
+	class var mainThreadScheduler: QueueScheduler {
+		get {
+			return Shared.mainThreadScheduler
+		}
+	}
+
 	init(_ queue: dispatch_queue_t) {
 		dispatch_set_target_queue(self.queue, queue)
 	}
