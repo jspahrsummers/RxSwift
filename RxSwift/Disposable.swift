@@ -84,3 +84,25 @@ class CompositeDisposable: Disposable {
 		}
 	}
 }
+
+class ScopedDisposable<T: Disposable>: Disposable {
+	let innerDisposable: T
+	
+	var disposed: Bool {
+		get {
+			return self.innerDisposable.disposed
+		}
+	}
+	
+	init(_ disposable: T) {
+		self.innerDisposable = disposable
+	}
+	
+	deinit {
+		self.dispose()
+	}
+	
+	func dispose() {
+		self.innerDisposable.dispose()
+	}
+}
