@@ -19,7 +19,6 @@
 		D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FD193D236A00C9CAF7 /* Event.swift */; };
 		D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */; };
 		D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */; };
-		D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA04193D2DB400C9CAF7 /* Observer.swift */; };
 		D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */; };
 		D0D18740193E95EB00F937F2 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0D1873F193E95EB00F937F2 /* Stream.swift */; };
 		D0F8CF1C1948F25100170790 /* AsyncSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8CF1B1948F25100170790 /* AsyncSequence.swift */; };
@@ -80,7 +79,6 @@
 		D0CBB9FD193D236A00C9CAF7 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
 		D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Disposable.swift; sourceTree = "<group>"; };
-		D0CBBA04193D2DB400C9CAF7 /* Observer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observer.swift; sourceTree = "<group>"; };
 		D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observable.swift; sourceTree = "<group>"; };
 		D0D1873F193E95EB00F937F2 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
 		D0F8CF1B1948F25100170790 /* AsyncSequence.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AsyncSequence.swift; sourceTree = "<group>"; };
@@ -208,7 +206,6 @@
 			isa = PBXGroup;
 			children = (
 				D0F8CF1B1948F25100170790 /* AsyncSequence.swift */,
-				D0CBBA04193D2DB400C9CAF7 /* Observer.swift */,
 				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
 				D0D1873F193E95EB00F937F2 /* Stream.swift */,
 			);
@@ -381,7 +378,6 @@
 				D0F8CF1C1948F25100170790 /* AsyncSequence.swift in Sources */,
 				D02164F61947B3E900D34273 /* SpinLock.swift in Sources */,
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
-				D0CBBA05193D2DB400C9CAF7 /* Observer.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,

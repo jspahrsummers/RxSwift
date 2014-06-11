@@ -8,7 +8,7 @@
 
 import Foundation
 
-class AsyncSequence<T>: Sequence, Observer {
+class AsyncSequence<T>: Sequence {
 	let condition = NSCondition()
 	var events: Event<T>[] = []
 	

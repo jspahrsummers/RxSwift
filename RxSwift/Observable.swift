@@ -9,24 +9,24 @@
 import Foundation
 
 class Observable<T>: Stream<T> {
-	typealias EventType = T
+	typealias Observer = Event<T> -> ()
 	
-	let create: Observer -> ()
-	init(create: Observer -> ()) {
-		self.create = create
+	let _observe: Observer -> ()
+	init(_ observe: Observer -> ()) {
+		self._observe = observe
 	}
 	
 	let observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
-	var observers: MutableBox<Observer>[] = []
+	var observers: Box<Observer>[] = []
  
 	func observe(observer: Observer) -> Disposable {
-		let box = MutableBox(observer)
+		let box = Box(observer)
 	
 		dispatch_sync(self.observerQueue, {
 			self.observers.append(box)
 		})
 		
-		self.create(box)
+		self._observe(box.value)
 		
 		return ActionDisposable {
 			dispatch_sync(self.observerQueue, {
@@ -37,12 +37,12 @@ class Observable<T>: Stream<T> {
 
 	func replay() -> (AsyncSequence<T>, Disposable) {
 		let s = AsyncSequence<T>()
-		return (s, observe(s))
+		return (s, self.observe(s.send))
 	}
 	
 	override class func empty() -> Stream<T> {
-		return Observable { observer in
-			observer.send(Event.Completed)
+		return Observable { send in
+			send(Event.Completed)
 		}
 	}
 	
