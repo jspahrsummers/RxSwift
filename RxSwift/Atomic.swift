@@ -50,4 +50,9 @@ class Atomic<T> {
 		
 		return result
 	}
+
+	@conversion
+	func __conversion() -> T {
+		return self.value
+	}
 }

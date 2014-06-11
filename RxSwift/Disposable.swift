@@ -29,7 +29,7 @@ class ActionDisposable: Disposable {
 	
 	var disposed: Bool {
 		get {
-			return self.action.value == nil
+			return self.action == nil
 		}
 	}
 
@@ -38,7 +38,7 @@ class ActionDisposable: Disposable {
 	}
 	
 	func dispose() {
-		self.action.value?()
+		self.action?()
 	}
 }
 
@@ -112,5 +112,47 @@ class ScopedDisposable: Disposable {
 	
 	func dispose() {
 		self.innerDisposable.dispose()
+	}
+}
+
+class SerialDisposable: Disposable {
+	struct State {
+		var innerDisposable: Disposable? = nil
+		var disposed = false
+	}
+
+	var state = Atomic(State())
+
+	var disposed: Bool {
+		get {
+			return self.state.value.disposed
+		}
+	}
+
+	var innerDisposable: Disposable? {
+		get {
+			return self.state.value.innerDisposable
+		}
+
+		set(d) {
+			self.state.modify {
+				var s = $0
+				if s.innerDisposable === d {
+					return s
+				}
+
+				s.innerDisposable?.dispose()
+				s.innerDisposable = d
+				if s.disposed {
+					d?.dispose()
+				}
+
+				return s
+			}
+		}
+	}
+
+	func dispose() {
+		self.innerDisposable = nil
 	}
 }
