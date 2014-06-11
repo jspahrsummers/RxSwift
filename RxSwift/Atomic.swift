@@ -31,12 +31,7 @@ class Atomic<T> {
 	}
 	
 	func replace(newValue: T) -> T {
-		lock.lock()
-		let oldValue = self.wrapper()
-		self.wrapper = { newValue }
-		lock.unlock()
-		
-		return oldValue
+		return modify { oldValue in newValue }
 	}
 	
 	func modify(action: T -> T) -> T {
