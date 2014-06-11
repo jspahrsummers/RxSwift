@@ -149,19 +149,11 @@
 			isa = PBXGroup;
 			children = (
 				D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */,
-				D02164FB1947C91C00D34273 /* ArrayExtensions.swift */,
-				D02164F71947BC4500D34273 /* Atomic.swift */,
-				D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */,
-				D0D18744193EBCFC00F937F2 /* Enumerator.swift */,
-				D0D18742193EBCF100F937F2 /* Enumerable.swift */,
-				D0CBB9FD193D236A00C9CAF7 /* Event.swift */,
-				D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */,
-				D0CBBA04193D2DB400C9CAF7 /* Observer.swift */,
-				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
-				D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */,
-				D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */,
-				D02164F51947B3E900D34273 /* SpinLock.swift */,
-				D0D1873F193E95EB00F937F2 /* Stream.swift */,
+				D0F8CF151948E51E00170790 /* Extensions */,
+				D0F8CF101948E50C00170790 /* Concurrency Primitives */,
+				D0F8CF181948E58C00170790 /* Resource Management */,
+				D0F8CF161948E53200170790 /* Streams */,
+				D0F8CF171948E53E00170790 /* Value Types */,
 				D0CBB9E2193D1D1500C9CAF7 /* Supporting Files */,
 			);
 			path = RxSwift;
@@ -190,6 +182,54 @@
 				D0CBB9F0193D1D1500C9CAF7 /* Info.plist */,
 			);
 			name = "Supporting Files";
+			sourceTree = "<group>";
+		};
+		D0F8CF101948E50C00170790 /* Concurrency Primitives */ = {
+			isa = PBXGroup;
+			children = (
+				D02164F71947BC4500D34273 /* Atomic.swift */,
+				D0CBB9FB193D1D3500C9CAF7 /* Promise.swift */,
+				D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */,
+				D02164F51947B3E900D34273 /* SpinLock.swift */,
+			);
+			name = "Concurrency Primitives";
+			sourceTree = "<group>";
+		};
+		D0F8CF151948E51E00170790 /* Extensions */ = {
+			isa = PBXGroup;
+			children = (
+				D02164FB1947C91C00D34273 /* ArrayExtensions.swift */,
+				D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */,
+			);
+			name = Extensions;
+			sourceTree = "<group>";
+		};
+		D0F8CF161948E53200170790 /* Streams */ = {
+			isa = PBXGroup;
+			children = (
+				D0D18744193EBCFC00F937F2 /* Enumerator.swift */,
+				D0D18742193EBCF100F937F2 /* Enumerable.swift */,
+				D0CBBA04193D2DB400C9CAF7 /* Observer.swift */,
+				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
+				D0D1873F193E95EB00F937F2 /* Stream.swift */,
+			);
+			name = Streams;
+			sourceTree = "<group>";
+		};
+		D0F8CF171948E53E00170790 /* Value Types */ = {
+			isa = PBXGroup;
+			children = (
+				D0CBB9FD193D236A00C9CAF7 /* Event.swift */,
+			);
+			name = "Value Types";
+			sourceTree = "<group>";
+		};
+		D0F8CF181948E58C00170790 /* Resource Management */ = {
+			isa = PBXGroup;
+			children = (
+				D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */,
+			);
+			name = "Resource Management";
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
