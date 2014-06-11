@@ -12,35 +12,31 @@ class Observable<T>: Stream<T> {
 	typealias EventType = T
 	
 	let create: Observer -> ()
-	
 	init(create: Observer -> ()) {
 		self.create = create
 	}
 	
 	let observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
-	var observers: Observer[] = []
+	var observers: MutableBox<Observer>[] = []
  
-	func addObserver(observer: Observer) {
-		dispatch_sync(observerQueue, {
-			self.observers.append(observer)
-		})
-		
-		self.create(observer)
-	}
+	func observe(observer: Observer) -> Disposable {
+		let box = MutableBox(observer)
 	
-	// TODO
-	/*
-	func removeObserver(observer: Observer) {
-		dispatch_sync(observerQueue, {
-			self.observers = removeObjectIdenticalTo(observer, fromArray: self.observers)
+		dispatch_sync(self.observerQueue, {
+			self.observers.append(box)
 		})
-	}
-	*/
-
-	func replay() -> AsyncSequence<T> {
-		let s = AsyncSequence<T>()
-		addObserver(s)
 		
-		return s
+		self.create(box)
+		
+		return ActionDisposable {
+			dispatch_sync(self.observerQueue, {
+				self.observers = removeObjectIdenticalTo(box, fromArray: self.observers)
+			})
+		}
+	}
+
+	func replay() -> (AsyncSequence<T>, Disposable) {
+		let s = AsyncSequence<T>()
+		return (s, observe(s))
 	}
 }
