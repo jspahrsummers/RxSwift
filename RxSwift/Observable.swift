@@ -42,12 +42,14 @@ class Observable<T>: Stream<T> {
 	
 	override class func empty() -> Stream<T> {
 		return Observable { send in
-			send(Event.Completed)
+			send(.Completed)
 		}
 	}
 	
-	override class func single(T) -> Stream<T> {
-		return Stream()
+	override class func single(value: T) -> Stream<T> {
+		return Observable { send in
+			send(.Next(Box(value)))
+		}
 	}
 	
 	override class func never() -> Stream<T> {
