@@ -9,24 +9,24 @@
 import Foundation
 
 class Observable<T>: Stream<T> {
-	typealias EventType = T
+	typealias Observer = Event<T> -> ()
 	
-	let create: Observer -> ()
-	init(create: Observer -> ()) {
-		self.create = create
+	let _observe: Observer -> Disposable?
+	init(_ observe: Observer -> Disposable?) {
+		self._observe = observe
 	}
 	
 	let observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
-	var observers: MutableBox<Observer>[] = []
+	var observers: Box<Observer>[] = []
  
 	func observe(observer: Observer) -> Disposable {
-		let box = MutableBox(observer)
+		let box = Box(observer)
 	
 		dispatch_sync(self.observerQueue, {
 			self.observers.append(box)
 		})
 		
-		self.create(box)
+		self._observe(box.value)
 		
 		return ActionDisposable {
 			dispatch_sync(self.observerQueue, {
@@ -37,6 +37,78 @@ class Observable<T>: Stream<T> {
 
 	func replay() -> (AsyncSequence<T>, Disposable) {
 		let s = AsyncSequence<T>()
-		return (s, observe(s))
+		return (s, self.observe(s.send))
+	}
+	
+	override class func empty() -> Observable<T> {
+		return Observable { send in
+			send(.Completed)
+			return nil
+		}
+	}
+	
+	override class func single(value: T) -> Observable<T> {
+		return Observable { send in
+			send(.Next(Box(value)))
+			return nil
+		}
+	}
+
+	override func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
+		return Observable<U> { send in
+			let disposable = CompositeDisposable()
+			let inFlight = Atomic(1)
+			var state = initial
+
+			func decrementInFlight() {
+				let rem = inFlight.modify { $0 - 1 }
+				if rem == 0 {
+					send(.Completed)
+				}
+			}
+
+			let selfDisposable = SerialDisposable()
+			disposable.addDisposable(selfDisposable)
+
+			selfDisposable.innerDisposable = self.observe { event in
+				switch event {
+				case let .Next(value):
+					let (newState, stream) = f(state, value)
+
+					if let s = newState {
+						state = s
+					} else {
+						selfDisposable.dispose()
+					}
+
+					let streamDisposable = SerialDisposable()
+					disposable.addDisposable(streamDisposable)
+
+					streamDisposable.innerDisposable = (stream as Observable<U>).observe { event in
+						if event.isTerminating {
+							disposable.removeDisposable(streamDisposable)
+						}
+
+						switch event {
+						case let .Completed:
+							decrementInFlight()
+
+						default:
+							send(event)
+						}
+					}
+
+					break
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					decrementInFlight()
+				}
+			}
+
+			return disposable
+		}
 	}
 }
