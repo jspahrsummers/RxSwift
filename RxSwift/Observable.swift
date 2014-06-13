@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// A push-driven stream of values.
+/// A producer-driven (push-based) stream of values.
 class Observable<T>: Stream<T> {
 	/// The type of a consumer for the stream's events.
 	typealias Observer = Event<T> -> ()
@@ -38,6 +38,16 @@ class Observable<T>: Stream<T> {
 				self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
 			})
 		}
+	}
+
+	/// Buffers all new events into a sequence which can be enumerated
+	/// on-demand.
+	///
+	/// Returns the buffered sequence, and a disposable which can be used to
+	/// stop buffering further events.
+	func replay() -> (AsyncSequence<T>, Disposable) {
+		let buf = AsyncBuffer<T>()
+		return (buf, self.observe(buf.send))
 	}
 	
 	override class func empty() -> Observable<T> {
@@ -112,15 +122,5 @@ class Observable<T>: Stream<T> {
 
 			return disposable
 		}
-	}
-
-	/// Buffers all new events into a sequence which can be enumerated
-	/// on-demand.
-	///
-	/// Returns the buffered sequence, and a disposable which can be used to
-	/// stop buffering further events.
-	func replay() -> (AsyncSequence<T>, Disposable) {
-		let buf = AsyncBuffer<T>()
-		return (buf, self.observe(buf.send))
 	}
 }

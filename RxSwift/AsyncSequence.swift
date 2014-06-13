@@ -8,12 +8,22 @@
 
 import Foundation
 
+/// A consumer-driven (pull-based) stream of values.
 class AsyncSequence<T>: Stream<T>, Sequence {
 	typealias GeneratorType = GeneratorOf<Promise<Event<T>>>
 
 	let _generate: () -> GeneratorType
 	init(_ generate: () -> GeneratorType) {
 		self._generate = generate
+	}
+
+	/// Instantiates a generator that will instantly return Promise<Event<T>>
+	/// objects, representing future events in the stream.
+	///
+	/// Work will only begin when the generated promises are actually resolved.
+	/// Each promise may be evaluated in any order, or even skipped entirely.
+	func generate() -> GeneratorType {
+		return self._generate()
 	}
 	
 	override class func empty() -> AsyncSequence<T> {
@@ -31,7 +41,7 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 		}
 	}
 
-	struct FlattenScanGenerator<S, U>: Generator {
+	struct _FlattenScanGenerator<S, U>: Generator {
 		let disposable: Disposable
 		let scanFunc: (S, T) -> (S?, Stream<U>)
 		
@@ -91,12 +101,8 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 
 	override func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> AsyncSequence<U> {
 		return AsyncSequence<U> {
-			let g = FlattenScanGenerator(disposable: SimpleDisposable(), scanFunc: f, valueGenerators: [], state: initial, selfGenerator: self.generate())
+			let g = _FlattenScanGenerator(disposable: SimpleDisposable(), scanFunc: f, valueGenerators: [], state: initial, selfGenerator: self.generate())
 			return GeneratorOf(g)
 		}
-	}
-
-	func generate() -> GeneratorType {
-		return self._generate()
 	}
 }
