@@ -8,24 +8,6 @@
 
 import Foundation
 
-enum PromiseState<T> {
-	case Unresolved(() -> T)
-	case Resolving
-	case Done(Box<T>)
-	
-	var isResolving: Bool {
-		get {
-			switch self {
-			case let .Resolving:
-				return true
-				
-			default:
-				return false
-			}
-		}
-	}
-}
-
 class Promise<T> {
     let _queue = dispatch_queue_create("com.github.RxSwift.Promise", DISPATCH_QUEUE_CONCURRENT)
 	let _suspended = Atomic(true)
