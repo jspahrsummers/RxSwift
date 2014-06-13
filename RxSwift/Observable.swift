@@ -11,8 +11,8 @@ import Foundation
 class Observable<T>: Stream<T> {
 	typealias Observer = Event<T> -> ()
 	
-	let _observe: Observer -> ()
-	init(_ observe: Observer -> ()) {
+	let _observe: Observer -> Disposable?
+	init(_ observe: Observer -> Disposable?) {
 		self._observe = observe
 	}
 	
@@ -40,27 +40,75 @@ class Observable<T>: Stream<T> {
 		return (s, self.observe(s.send))
 	}
 	
-	override class func empty() -> Stream<T> {
+	override class func empty() -> Observable<T> {
 		return Observable { send in
 			send(.Completed)
+			return nil
 		}
 	}
 	
-	override class func single(value: T) -> Stream<T> {
+	override class func single(value: T) -> Observable<T> {
 		return Observable { send in
 			send(.Next(Box(value)))
+			return nil
 		}
 	}
-	
-	override class func never() -> Stream<T> {
-		return Stream()
-	}
 
-	override func map<U: AnyObject>(transform: T -> U) -> Stream<U> {
-		return .empty()
-	}
-	
-	override func flatten<U: AnyObject>() -> Stream<U> {
-		return .empty()
+	override func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
+		return Observable<U> { send in
+			let disposable = CompositeDisposable()
+			let inFlight = Atomic(1)
+			var state = initial
+
+			func decrementInFlight() {
+				let rem = inFlight.modify { $0 - 1 }
+				if rem == 0 {
+					send(.Completed)
+				}
+			}
+
+			let selfDisposable = SerialDisposable()
+			disposable.addDisposable(selfDisposable)
+
+			selfDisposable.innerDisposable = self.observe { event in
+				switch event {
+				case let .Next(value):
+					let (newState, stream) = f(state, value)
+
+					if let s = newState {
+						state = s
+					} else {
+						selfDisposable.dispose()
+					}
+
+					let streamDisposable = SerialDisposable()
+					disposable.addDisposable(streamDisposable)
+
+					streamDisposable.innerDisposable = (stream as Observable<U>).observe { event in
+						if event.isTerminating {
+							disposable.removeDisposable(streamDisposable)
+						}
+
+						switch event {
+						case let .Completed:
+							decrementInFlight()
+
+						default:
+							send(event)
+						}
+					}
+
+					break
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					decrementInFlight()
+				}
+			}
+
+			return disposable
+		}
 	}
 }
