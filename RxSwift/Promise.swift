@@ -27,111 +27,51 @@ enum PromiseState<T> {
 }
 
 class Promise<T> {
-	let condition = NSCondition()
-	var finishedActions: (() -> ())[] = []
-	
-	var state: PromiseState<T> {
-		willSet(newState) {
-			switch newState {
-			case let .Done:
-				for action in self.finishedActions {
-					action()
-				}
-				
-				self.finishedActions = []
-				self.condition.broadcast()
-				
-			default:
-				break
-			}
+    let _queue = dispatch_queue_create("com.github.RxSwift.Promise", DISPATCH_QUEUE_CONCURRENT)
+	let _suspended = Atomic(true)
+
+	var _result: Box<T>? = nil
+
+	init(_ work: () -> T, targetQueue: dispatch_queue_t = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
+		dispatch_set_target_queue(self._queue, targetQueue)
+		dispatch_suspend(self._queue)
+		
+		dispatch_barrier_async(self._queue) {
+			self._result = Box(work())
 		}
 	}
-
-	init(work: () -> T) {
-		self.condition.name = "com.github.RxSwift.Promise"
-		self.state = .Unresolved(work);
-	}
 	
-	func start(scheduler: Scheduler) -> Disposable? {
-		return scheduler.schedule {
-			let maybeWork: (() -> T)? = withLock(self.condition) {
-				switch self.state {
-				case let .Unresolved(work):
-					self.state = .Resolving
-					return work
-					
-				case let .Done(result):
-					fallthrough
-				case let .Resolving:
-					return nil
-				}
+	func start() {
+		self._suspended.modify { b in
+			if b {
+				dispatch_resume(self._queue)
 			}
 			
-			if maybeWork == nil {
-				return
-			}
-			
-			let result = maybeWork!()
-			
-			withLock(self.condition) { () -> () in
-				self.state = PromiseState.Done(Box(result))
-			}
+			return false
 		}
 	}
 	
 	func result() -> T {
-		let (maybeWork: (() -> T)?, maybeResult: T?) = withLock(self.condition) {
-			while self.state.isResolving {
-				self.condition.wait()
-			}
-
-			switch self.state {
-			case let .Unresolved(work):
-				self.state = .Resolving
-				return (work, nil)
-				
-			case let .Done(result):
-				return (nil, result)
-				
-			default:
-				return (nil, nil)
-			}
-		}
+		self.start()
 		
-		if let work = maybeWork {
-			let result = work()
-
-			withLock(self.condition) { () -> () in
-				self.state = PromiseState.Done(Box(result))
-			}
-
-			return result
-		} else {
-			return maybeResult!
-		}
+		// Wait for the work to finish.
+		dispatch_sync(self._queue) {}
+		
+		return self._result!
 	}
 	
-	func whenFinished(scheduler: Scheduler, action: T -> ()) -> Disposable? {
-		return withLock(self.condition) {
-			switch self.state {
-			case let .Done(result):
-				return scheduler.schedule {
-					action(result)
-				}
-			
-			default:
-				let disposable = SerialDisposable()
-			
-				// TODO: Offer a way to remove this from the array too?
-				self.finishedActions.append {
-					disposable.innerDisposable = scheduler.schedule {
-						action(self.result())
-					}
-				}
-				
-				return disposable
+	func whenFinished(action: T -> ()) -> Disposable {
+		let disposable = SimpleDisposable()
+		
+		dispatch_async(self._queue) {
+			if disposable.disposed {
+				return
 			}
+		
+			action(self._result!)
 		}
+		
+		return disposable
 	}
 
 	func then<U>(action: T -> Promise<U>) -> Promise<U> {
