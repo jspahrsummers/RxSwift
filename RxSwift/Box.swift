@@ -8,15 +8,18 @@
 
 import Foundation
 
+/// An immutable wrapper that can turn any value into an object.
 class Box<T> {
 	let _closure: () -> T
 
+	/// The underlying value.
 	var value: T {
 		get {
 			return self._closure()
 		}
 	}
 	
+	/// Initializes the box to wrap the given value.
 	init(_ value: T) {
 		self._closure = { value }
 	}
@@ -27,9 +30,11 @@ class Box<T> {
 	}
 }
 
+/// A mutable box, that supports replacing its inner value.
 class MutableBox<T>: Box<T> {
 	var _mutableClosure: () -> T
 
+	/// The underlying value.
 	override var value: T {
 		get {
 			return self._mutableClosure()
@@ -40,6 +45,7 @@ class MutableBox<T>: Box<T> {
 		}
 	}
 	
+	/// Initializes the box to wrap the given value.
 	init(_ value: T) {
 		self._mutableClosure = { value }
 		super.init(value)

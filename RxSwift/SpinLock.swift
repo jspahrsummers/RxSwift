@@ -8,32 +8,39 @@
 
 import Foundation
 
+/// An abstraction over spin locks.
 class SpinLock {
-	var spinlock = OS_SPINLOCK_INIT
+	var _spinlock = OS_SPINLOCK_INIT
 	
+	/// Locks the spin lock.
 	func lock() {
-		withUnsafePointer(&spinlock, OSSpinLockLock)
+		withUnsafePointer(&_spinlock, OSSpinLockLock)
 	}
 	
+	/// Unlocks the spin lock.
 	func unlock() {
-		withUnsafePointer(&spinlock, OSSpinLockUnlock)
+		withUnsafePointer(&_spinlock, OSSpinLockUnlock)
 	}
 	
+	/// Acquires the spin lock, performs the given action, then releases the
+	/// lock.
 	func withLock<T>(action: () -> T) -> T {
-		withUnsafePointer(&spinlock, OSSpinLockLock)
+		withUnsafePointer(&_spinlock, OSSpinLockLock)
 		let result = action()
-		withUnsafePointer(&spinlock, OSSpinLockUnlock)
+		withUnsafePointer(&_spinlock, OSSpinLockUnlock)
 		
 		return result
 	}
 	
+	/// Tries to acquire the spin lock, performing the given action if it's
+	/// available, or else aborting immediately without running the action.
 	func tryLock<T>(action: () -> T) -> T? {
-		if !withUnsafePointer(&spinlock, OSSpinLockTry) {
+		if !withUnsafePointer(&_spinlock, OSSpinLockTry) {
 			return nil
 		}
 		
 		let result = action()
-		withUnsafePointer(&spinlock, OSSpinLockUnlock)
+		withUnsafePointer(&_spinlock, OSSpinLockUnlock)
 		
 		return result
 	}
