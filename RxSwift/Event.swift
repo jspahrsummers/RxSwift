@@ -16,12 +16,25 @@ enum Event<T> {
 	var isTerminating: Bool {
 		get {
 			switch self {
-			case .Next:
+			case let .Next:
 				return false
 			
 			default:
 				return true
 			}
+		}
+	}
+	
+	func map<U>(f: T -> U) -> Event<U> {
+		switch self {
+		case let .Next(box):
+			return .Next(Box(f(box)))
+			
+		case let .Error(error):
+			return .Error(error)
+			
+		case let .Completed:
+			return .Completed
 		}
 	}
 }

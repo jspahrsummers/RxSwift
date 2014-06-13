@@ -16,8 +16,9 @@ enum PromiseState<T> {
 	var isResolving: Bool {
 		get {
 			switch self {
-			case .Resolving:
+			case let .Resolving:
 				return true
+				
 			default:
 				return false
 			}
@@ -32,7 +33,7 @@ class Promise<T> {
 	var state: PromiseState<T> {
 		willSet(newState) {
 			switch newState {
-			case .Done:
+			case let .Done:
 				for action in self.finishedActions {
 					action()
 				}
@@ -61,7 +62,7 @@ class Promise<T> {
 					
 				case let .Done(result):
 					fallthrough
-				case .Resolving:
+				case let .Resolving:
 					return nil
 				}
 			}
