@@ -8,7 +8,9 @@
 
 import Foundation
 
+/// A push-driven stream of values.
 class Observable<T>: Stream<T> {
+	/// The type of a consumer for the stream's events.
 	typealias Observer = Event<T> -> ()
 	
 	let _observe: Observer -> Disposable?
@@ -16,21 +18,24 @@ class Observable<T>: Stream<T> {
 		self._observe = observe
 	}
 	
-	let observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
-	var observers: Box<Observer>[] = []
+	let _observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
+	var _observers: Box<Observer>[] = []
  
+	/// Observes the stream for new events.
+	///
+	/// Returns a disposable which can be used to cease observation.
 	func observe(observer: Observer) -> Disposable {
 		let box = Box(observer)
 	
-		dispatch_sync(self.observerQueue, {
-			self.observers.append(box)
+		dispatch_sync(_observerQueue, {
+			self._observers.append(box)
 		})
 		
 		self._observe(box.value)
 		
 		return ActionDisposable {
-			dispatch_sync(self.observerQueue, {
-				self.observers = removeObjectIdenticalTo(box, fromArray: self.observers)
+			dispatch_sync(self._observerQueue, {
+				self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
 			})
 		}
 	}
@@ -109,6 +114,11 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	/// Buffers all new events into a sequence which can be enumerated
+	/// on-demand.
+	///
+	/// Returns the buffered sequence, and a disposable which can be used to
+	/// stop buffering further events.
 	func replay() -> (AsyncSequence<T>, Disposable) {
 		let buf = AsyncBuffer<T>()
 		return (buf, self.observe(buf.send))

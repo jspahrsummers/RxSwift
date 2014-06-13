@@ -8,51 +8,65 @@
 
 import Foundation
 
+/// An atomic variable.
 class Atomic<T> {
-	let lock = SpinLock()
+	let _lock = SpinLock()
 	
-	let box: MutableBox<T>
+	let _box: MutableBox<T>
+	
+	/// Atomically gets or sets the value of the variable.
 	var value: T {
 		get {
-			return lock.withLock {
-				return self.box
+			return _lock.withLock {
+				return self._box
 			}
 		}
 	
 		set(newValue) {
-			lock.lock()
-			self.box.value = newValue
-			lock.unlock()
+			_lock.lock()
+			_box.value = newValue
+			_lock.unlock()
 		}
 	}
 	
+	/// Initializes the variable with the given initial value.
 	init(_ value: T) {
-		self.box = MutableBox(value)
+		_box = MutableBox(value)
 	}
 	
+	/// Atomically replaces the contents of the variable.
+	///
+	/// Returns the new value.
 	func replace(newValue: T) -> T {
 		return modify { oldValue in newValue }
 	}
 	
+	/// Atomically modifies the variable.
+	///
+	/// Returns the new value.
 	func modify(action: T -> T) -> T {
-		lock.lock()
-		let newValue = action(self.box)
-		self.box.value = newValue
-		lock.unlock()
+		_lock.lock()
+		let newValue = action(_box)
+		_box.value = newValue
+		_lock.unlock()
 		
 		return newValue
 	}
 	
+	/// Atomically performs an arbitrary action using the current value of the
+	/// variable.
+	///
+	/// Returns the result of the action.
 	func withValue<U>(action: T -> U) -> U {
-		lock.lock()
-		let result = action(self.box)
-		lock.unlock()
+		_lock.lock()
+		let result = action(_box)
+		_lock.unlock()
 		
 		return result
 	}
 
 	@conversion
 	func __conversion() -> T {
-		return self.value
+		return value
 	}
 }

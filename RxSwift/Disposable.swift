@@ -8,63 +8,77 @@
 
 import Foundation
 
+/// Represents an object that can be “disposed,” usually associated with freeing
+/// resources or canceling work.
 @class_protocol
 protocol Disposable {
+	/// Whether this disposable has been disposed already.
 	var disposed: Bool { get }
 
 	func dispose()
 }
 
+/// A disposable that only flips `disposed` upon disposal, and performs no other
+/// work.
 class SimpleDisposable: Disposable {
-	var disposed = false
+	var _disposed = Atomic(false)
+
+	var disposed: Bool {
+		get {
+			return _disposed
+		}
+	}
 	
 	func dispose() {
-        self.disposed = true
-        OSMemoryBarrier()
+		_disposed.replace(true)
 	}
 }
 
+/// A disposable that will run an action upon disposal.
 class ActionDisposable: Disposable {
-	var action: Atomic<(() -> ())?>
+	var _action: Atomic<(() -> ())?>
 	
 	var disposed: Bool {
 		get {
-			return self.action == nil
+			return _action == nil
 		}
 	}
 
+	/// Initializes the disposable to run the given action upon disposal.
 	init(action: () -> ()) {
-		self.action = Atomic(action)
+		_action = Atomic(action)
 	}
 	
 	func dispose() {
-		self.action?()
+		_action?()
 	}
 }
 
+/// A disposable that will dispose of any number of other disposables.
 class CompositeDisposable: Disposable {
-	var disposables: Atomic<Disposable[]?> = Atomic([])
+	var _disposables: Atomic<Disposable[]?> = Atomic([])
 	
 	var disposed: Bool {
 		get {
-			return self.disposables.value == nil
+			return _disposables.value == nil
 		}
 	}
 	
 	func dispose() {
-		if let ds = self.disposables.replace(nil) {
+		if let ds = _disposables.replace(nil) {
 			for d in ds {
 				d.dispose()
 			}
 		}
 	}
 	
+	/// Adds the given disposable to the list.
 	func addDisposable(d: Disposable?) {
 		if d == nil {
 			return
 		}
 	
-		let shouldDispose: Bool = self.disposables.withValue {
+		let shouldDispose: Bool = _disposables.withValue {
 			if var ds = $0 {
 				ds.append(d!)
 				return false
@@ -78,12 +92,13 @@ class CompositeDisposable: Disposable {
 		}
 	}
 	
+	/// Removes the given disposable from the list.
 	func removeDisposable(d: Disposable?) {
 		if d == nil {
 			return
 		}
 	
-		self.disposables.modify {
+		_disposables.modify {
 			if let ds = $0 {
 				return removeObjectIdenticalTo(d!, fromArray: ds)
 			} else {
@@ -93,49 +108,60 @@ class CompositeDisposable: Disposable {
 	}
 }
 
+/// A disposable that, upon deinitialization, will automatically dispose of
+/// another disposable.
 class ScopedDisposable: Disposable {
+	/// The disposable which will be disposed when the ScopedDisposable
+	/// deinitializes.
 	let innerDisposable: Disposable
 	
 	var disposed: Bool {
 		get {
-			return self.innerDisposable.disposed
+			return innerDisposable.disposed
 		}
 	}
 	
+	/// Initializes the receiver to dispose of the argument upon
+	/// deinitialization.
 	init(_ disposable: Disposable) {
-		self.innerDisposable = disposable
+		innerDisposable = disposable
 	}
 	
 	deinit {
-		self.dispose()
+		dispose()
 	}
 	
 	func dispose() {
-		self.innerDisposable.dispose()
+		innerDisposable.dispose()
 	}
 }
 
+/// A disposable that will optionally dispose of another disposable.
 class SerialDisposable: Disposable {
-	struct State {
+	struct _State {
 		var innerDisposable: Disposable? = nil
 		var disposed = false
 	}
 
-	var state = Atomic(State())
+	var _state = Atomic(_State())
 
 	var disposed: Bool {
 		get {
-			return self.state.value.disposed
+			return _state.value.disposed
 		}
 	}
 
+	/// The inner disposable to dispose of.
+	///
+	/// Whenever this is set to a new disposable, the old one is automatically
+	/// disposed.
 	var innerDisposable: Disposable? {
 		get {
-			return self.state.value.innerDisposable
+			return _state.value.innerDisposable
 		}
 
 		set(d) {
-			self.state.modify {
+			_state.modify {
 				var s = $0
 				if s.innerDisposable === d {
 					return s
@@ -152,12 +178,14 @@ class SerialDisposable: Disposable {
 		}
 	}
 
+	/// Initializes the receiver to dispose of the argument when the
+	/// SerialDisposable is disposed.
 	convenience init(_ disposable: Disposable) {
 		self.init()
-		self.innerDisposable = disposable
+		innerDisposable = disposable
 	}
 
 	func dispose() {
-		self.innerDisposable = nil
+		innerDisposable = nil
 	}
 }

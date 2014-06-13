@@ -8,6 +8,7 @@
 
 import Foundation
 
+/// Acquires the lock, performs the given action, then releases the lock.
 func withLock<L: NSLocking, T>(lock: L, action: () -> T) -> T {
 	lock.lock()
 	let result = action()
