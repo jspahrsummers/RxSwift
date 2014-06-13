@@ -34,11 +34,6 @@ class Observable<T>: Stream<T> {
 			})
 		}
 	}
-
-	func replay() -> (AsyncSequence<T>, Disposable) {
-		let s = AsyncSequence<T>()
-		return (s, self.observe(s.send))
-	}
 	
 	override class func empty() -> Observable<T> {
 		return Observable { send in
@@ -47,9 +42,9 @@ class Observable<T>: Stream<T> {
 		}
 	}
 	
-	override class func single(value: T) -> Observable<T> {
+	override class func single(x: T) -> Observable<T> {
 		return Observable { send in
-			send(.Next(Box(value)))
+			send(.Next(Box(x)))
 			return nil
 		}
 	}
@@ -58,6 +53,8 @@ class Observable<T>: Stream<T> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()
 			let inFlight = Atomic(1)
+
+			// TODO: Thread safety
 			var state = initial
 
 			func decrementInFlight() {
@@ -110,5 +107,10 @@ class Observable<T>: Stream<T> {
 
 			return disposable
 		}
+	}
+
+	func replay() -> (AsyncSequence<T>, Disposable) {
+		let buf = AsyncBuffer<T>()
+		return (buf, self.observe(buf.send))
 	}
 }
