@@ -80,6 +80,13 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	override class func error(error: NSError) -> Observable<T> {
+		return Observable { send in
+			send(.Error(error))
+			return nil
+		}
+	}
+
 	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()

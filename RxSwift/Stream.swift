@@ -40,6 +40,11 @@ class Stream<T> {
 		return Stream()
 	}
 
+	/// Creates a stream that will generate the given error.
+	class func error(error: NSError) -> Stream<T> {
+		return Stream()
+	}
+
 	/// Scans over the stream, accumulating a state and mapping each value to
 	/// a new stream, then flattens all the resulting streams into one.
 	///
