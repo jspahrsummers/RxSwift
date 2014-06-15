@@ -10,8 +10,9 @@ import Foundation
 
 /// Represents a mutable property of type T along with the changes to its value.
 ///
-/// New observers of this stream will receive the current `value`, then all
-/// future values thereafter.
+/// New observers of this stream will receive the current `value`, all future
+/// values thereafter, and then a Completed event when the property is
+/// deinitialized.
 class ObservableProperty<T>: Observable<T> {
 	var _mutableClosure: () -> T
 
