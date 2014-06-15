@@ -250,4 +250,16 @@ class Observable<T>: Stream<T> {
 			return disposable
 		}
 	}
+
+	override func materialize() -> Observable<Event<T>> {
+		return Observable<Event<T>> { send in
+			return self.observe { event in
+				send(.Next(Box(event)))
+
+				if event.isTerminating {
+					send(.Completed)
+				}
+			}
+		}
+	}
 }

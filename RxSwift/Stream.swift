@@ -68,6 +68,12 @@ class Stream<T> {
 		return .empty()
 	}
 
+	/// Converts each of the receiver's events (including those outside of the
+	/// monad) into an Event value that can be manipulated directly.
+	func materialize() -> Stream<Event<T>> {
+		return .empty()
+	}
+
 	/// Lifts the given function over the values in the stream.
 	@final func map<U>(f: T -> U) -> Stream<U> {
 		return flattenScan(0) { (_, x) in (0, .single(f(x))) }
