@@ -69,8 +69,6 @@ class Observable<T>: Stream<T> {
 	/// event.
 	func takeUntil<U>(trigger: Observable<U>) -> Observable<T> {
 		return Observable { send in
-			let disposable = CompositeDisposable()
-
 			let triggerDisposable = trigger.observe { event in
 				switch event {
 				case let .Error:
@@ -82,9 +80,7 @@ class Observable<T>: Stream<T> {
 				}
 			}
 
-			disposable.addDisposable(triggerDisposable)
-			disposable.addDisposable(self.observe(send))
-			return disposable
+			return CompositeDisposable([triggerDisposable, self.observe(send)])
 		}
 	}
 	
@@ -188,7 +184,6 @@ class Observable<T>: Stream<T> {
 
 	override func zipWith<U>(stream: Stream<U>) -> Observable<(T, U)> {
 		return Observable<(T, U)> { send in
-			let disposable = CompositeDisposable()
 			let states = Atomic((_ZipState<T>(), _ZipState<U>()))
 
 			func drain() {
@@ -248,8 +243,6 @@ class Observable<T>: Stream<T> {
 				}
 			}
 
-			disposable.addDisposable(selfDisposable)
-
 			let otherDisposable = (stream as Observable<U>).observe { event in
 				switch event {
 				case let .Next(value):
@@ -268,9 +261,7 @@ class Observable<T>: Stream<T> {
 				}
 			}
 
-			disposable.addDisposable(otherDisposable)
-
-			return disposable
+			return CompositeDisposable([selfDisposable, otherDisposable])
 		}
 	}
 

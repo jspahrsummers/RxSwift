@@ -56,12 +56,23 @@ class ActionDisposable: Disposable {
 
 /// A disposable that will dispose of any number of other disposables.
 class CompositeDisposable: Disposable {
-	var _disposables: Atomic<Disposable[]?> = Atomic([])
+	var _disposables: Atomic<Disposable[]?>
 	
 	var disposed: Bool {
 		get {
 			return _disposables.value == nil
 		}
+	}
+
+	/// Initializes a CompositeDisposable containing the given list of
+	/// disposables.
+	init(_ disposables: Disposable[]) {
+		_disposables = Atomic(disposables)
+	}
+
+	/// Initializes an empty CompositeDisposable.
+	convenience init() {
+		self.init([])
 	}
 	
 	func dispose() {
