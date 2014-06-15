@@ -78,6 +78,21 @@ class Stream<T> {
 		}
 	}
 
+	/// Takes values while the given predicate remains true.
+	///
+	///
+	/// Returns a stream that consists of all values up to (but not including)
+	/// the value where the predicate was first false.
+	@final func takeWhile(pred: T -> Bool) -> Stream<T> {
+		return flattenScan(0) { (_, x) in
+			if pred(x) {
+				return (0, .single(x))
+			} else {
+				return (nil, .empty())
+			}
+		}
+	}
+
 	/// Skips the first `count` values in the stream.
 	///
 	/// If `count` is longer than the length of the stream, an empty stream is
@@ -88,6 +103,20 @@ class Stream<T> {
 				return (n + 1, .empty())
 			} else {
 				return (count, .single(x))
+			}
+		}
+	}
+
+	/// Skips values while the given predicate remains true.
+	///
+	/// Returns a stream that consists of all values after (and including) the
+	/// value where the predicate was first true.
+	@final func skipWhile(pred: T -> Bool) -> Stream<T> {
+		return flattenScan(true) { (skipping, x) in
+			if skipping && pred(x) {
+				return (true, .empty())
+			} else {
+				return (false, .single(x))
 			}
 		}
 	}
