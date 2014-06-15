@@ -55,6 +55,14 @@ class Stream<T> {
 		return .empty()
 	}
 
+	/// Zips the values of the given stream up with those of the receiver.
+	///
+	/// The first value of each stream will be combined, then the second value,
+	/// and so forth, until at least one of the streams is exhausted.
+	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)> {
+		return .empty()
+	}
+
 	/// Lifts the given function over the values in the stream.
 	@final func map<U>(f: T -> U) -> Stream<U> {
 		return flattenScan(0) { (_, x) in (0, .single(f(x))) }

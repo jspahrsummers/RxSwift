@@ -8,6 +8,21 @@
 
 import Foundation
 
+// TODO: This lives outside of the definition below because of an infinite loop
+// in the compiler. Move it back within Observable once that's fixed.
+struct _ZipState<T> {
+	var values: T[] = []
+	var completed = false
+
+	init() {
+	}
+
+	init(_ values: T[], _ completed: Bool) {
+		self.values = values
+		self.completed = completed
+	}
+}
+
 /// A push-driven stream of values.
 class Observable<T>: Stream<T> {
 	/// The type of a consumer for the stream's events.
@@ -135,6 +150,94 @@ class Observable<T>: Stream<T> {
 					send(event)
 				}
 			}
+
+			return disposable
+		}
+	}
+
+	override func zipWith<U>(stream: Stream<U>) -> Observable<(T, U)> {
+		return Observable<(T, U)> { send in
+			let disposable = CompositeDisposable()
+			let states = Atomic((_ZipState<T>(), _ZipState<U>()))
+
+			func drain() {
+				states.modify { (a, b) in
+					var av = a.values
+					var bv = b.values
+
+					while !av.isEmpty && !bv.isEmpty {
+						let v = (av[0], bv[0])
+						av.removeAtIndex(0)
+						bv.removeAtIndex(0)
+
+						send(.Next(Box(v)))
+					}
+
+					if a.completed || b.completed {
+						send(.Completed)
+					}
+
+					return (_ZipState(av, a.completed), _ZipState(bv, b.completed))
+				}
+			}
+
+			func modifyA(f: _ZipState<T> -> _ZipState<T>) {
+				states.modify { (a, b) in
+					var newA = f(a)
+					return (newA, b)
+				}
+
+				drain()
+			}
+
+			func modifyB(f: _ZipState<U> -> _ZipState<U>) {
+				states.modify { (a, b) in
+					var newB = f(b)
+					return (a, newB)
+				}
+
+				drain()
+			}
+
+			let selfDisposable = self.observe { event in
+				switch event {
+				case let .Next(value):
+					modifyA { s in
+						var values = s.values
+						values.append(value)
+
+						return _ZipState(values, false)
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					modifyA { s in _ZipState(s.values, true) }
+				}
+			}
+
+			disposable.addDisposable(selfDisposable)
+
+			let otherDisposable = (stream as Observable<U>).observe { event in
+				switch event {
+				case let .Next(value):
+					modifyB { s in
+						var values = s.values
+						values.append(value)
+
+						return _ZipState(values, false)
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					modifyB { s in _ZipState(s.values, true) }
+				}
+			}
+
+			disposable.addDisposable(otherDisposable)
 
 			return disposable
 		}
