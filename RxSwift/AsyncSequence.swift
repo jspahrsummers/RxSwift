@@ -145,4 +145,26 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 			}
 		}
 	}
+
+	override func materialize() -> AsyncSequence<Event<T>> {
+		return AsyncSequence<Event<T>> {
+			var generator = self.generate()
+			let disposable = SimpleDisposable()
+
+			return GeneratorOf {
+				if disposable.disposed {
+					return nil
+				}
+
+				if let p = generator.next() {
+					return p.then { event in
+						Promise { .Next(Box(event)) }
+					}
+				}
+
+				disposable.dispose()
+				return Promise { .Completed }
+			}
+		}
+	}
 }
