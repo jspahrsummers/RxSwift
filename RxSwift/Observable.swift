@@ -83,6 +83,42 @@ class Observable<T>: Stream<T> {
 			return CompositeDisposable([triggerDisposable, self.observe(send)])
 		}
 	}
+
+	/// Sends the latest value from the receiver only when `sampler` sends
+	/// a value.
+	///
+	/// The returned observable could repeat values if `sampler` fires more
+	/// often than the receiver. Values from `sampler` are ignored before the
+	/// receiver sends its first value.
+	func sample<U>(sampler: Observable<U>) -> Observable<T> {
+		return Observable { send in
+			let latest: Atomic<T?> = Atomic(nil)
+
+			let selfDisposable = self.observe { event in
+				switch event {
+				case let .Next(value):
+					latest.replace(value)
+
+				default:
+					send(event)
+				}
+			}
+
+			let samplerDisposable = sampler.observe { event in
+				switch event {
+				case let .Next:
+					if let v = latest.value {
+						send(.Next(Box(v)))
+					}
+
+				default:
+					break
+				}
+			}
+
+			return CompositeDisposable([selfDisposable, samplerDisposable])
+		}
+	}
 	
 	override class func empty() -> Observable<T> {
 		return Observable { send in
