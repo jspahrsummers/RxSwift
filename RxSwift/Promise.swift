@@ -9,7 +9,7 @@
 import Foundation
 
 /// Represents deferred work to generate a value of type T.
-class Promise<T> {
+@final class Promise<T> {
 	let _queue = dispatch_queue_create("com.github.RxSwift.Promise", DISPATCH_QUEUE_CONCURRENT)
 	let _suspended = Atomic(true)
 

@@ -21,7 +21,7 @@ protocol Scheduler {
 }
 
 /// A scheduler that performs all work synchronously.
-class ImmediateScheduler: Scheduler {
+@final class ImmediateScheduler: Scheduler {
 	func schedule(work: () -> ()) -> Disposable? {
 		work()
 		return nil
@@ -29,7 +29,7 @@ class ImmediateScheduler: Scheduler {
 }
 
 /// A scheduler backed by a serial GCD queue.
-class QueueScheduler: Scheduler {
+@final class QueueScheduler: Scheduler {
 	let _queue = dispatch_queue_create("com.github.RxSwift.QueueScheduler", DISPATCH_QUEUE_SERIAL)
 
 	struct _Shared {

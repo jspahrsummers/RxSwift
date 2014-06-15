@@ -9,7 +9,7 @@
 import Foundation
 
 /// An atomic variable.
-class Atomic<T> {
+@final class Atomic<T> {
 	let _lock = SpinLock()
 	
 	let _box: MutableBox<T>

@@ -9,7 +9,7 @@
 import Foundation
 
 /// An abstraction over spin locks.
-class SpinLock {
+@final class SpinLock {
 	var _spinlock = OS_SPINLOCK_INIT
 	
 	/// Locks the spin lock.

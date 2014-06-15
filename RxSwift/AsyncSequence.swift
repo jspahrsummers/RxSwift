@@ -101,7 +101,7 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 		}
 	}
 
-	override func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> AsyncSequence<U> {
+	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> AsyncSequence<U> {
 		return AsyncSequence<U> {
 			let g = _FlattenScanGenerator(disposable: SimpleDisposable(), scanFunc: f, valueGenerators: [], state: initial, selfGenerator: self.generate())
 			return GeneratorOf(g)
