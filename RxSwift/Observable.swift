@@ -64,6 +64,29 @@ class Observable<T>: Stream<T> {
 		let s = AsyncSequence<T>()
 		return (s, self.observe(s.send))
 	}
+
+	/// Takes events from the receiver until `trigger` sends a Next or Completed
+	/// event.
+	func takeUntil<U>(trigger: Observable<U>) -> Observable<T> {
+		return Observable { send in
+			let disposable = CompositeDisposable()
+
+			let triggerDisposable = trigger.observe { event in
+				switch event {
+				case let .Error:
+					// Do nothing.
+					break
+
+				default:
+					send(.Completed)
+				}
+			}
+
+			disposable.addDisposable(triggerDisposable)
+			disposable.addDisposable(self.observe(send))
+			return disposable
+		}
+	}
 	
 	override class func empty() -> Observable<T> {
 		return Observable { send in
