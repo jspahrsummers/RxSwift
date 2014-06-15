@@ -75,6 +75,7 @@ class Observable<T>: Stream<T> {
 	override class func single(value: T) -> Observable<T> {
 		return Observable { send in
 			send(.Next(Box(value)))
+			send(.Completed)
 			return nil
 		}
 	}
