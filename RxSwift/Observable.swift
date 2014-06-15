@@ -23,7 +23,7 @@ struct _ZipState<T> {
 	}
 }
 
-/// A push-driven stream of values.
+/// A producer-driven (push-based) stream of values.
 class Observable<T>: Stream<T> {
 	/// The type of a consumer for the stream's events.
 	typealias Observer = Event<T> -> ()
@@ -61,8 +61,8 @@ class Observable<T>: Stream<T> {
 	/// Returns the buffered sequence, and a disposable which can be used to
 	/// stop buffering further events.
 	func replay() -> (AsyncSequence<T>, Disposable) {
-		let s = AsyncSequence<T>()
-		return (s, self.observe(s.send))
+		let buf = AsyncBuffer<T>()
+		return (buf, self.observe(buf.send))
 	}
 
 	/// Takes events from the receiver until `trigger` sends a Next or Completed
@@ -127,9 +127,9 @@ class Observable<T>: Stream<T> {
 		}
 	}
 	
-	override class func single(value: T) -> Observable<T> {
+	override class func single(x: T) -> Observable<T> {
 		return Observable { send in
-			send(.Next(Box(value)))
+			send(.Next(Box(x)))
 			send(.Completed)
 			return nil
 		}
@@ -146,6 +146,8 @@ class Observable<T>: Stream<T> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()
 			let inFlight = Atomic(1)
+
+			// TODO: Thread safety
 			var state = initial
 
 			func decrementInFlight() {

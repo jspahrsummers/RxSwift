@@ -67,4 +67,10 @@ import Foundation
 		
 		return disposable
 	}
+
+	func then<U>(action: T -> Promise<U>) -> Promise<U> {
+		return Promise<U> {
+			action(self.result()).result()
+		}
+	}
 }
