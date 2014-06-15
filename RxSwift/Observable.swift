@@ -121,4 +121,22 @@ class Observable<T>: Stream<T> {
 			return disposable
 		}
 	}
+
+	override func concat(stream: Stream<T>) -> Observable<T> {
+		return Observable { send in
+			let disposable = SerialDisposable()
+
+			disposable.innerDisposable = self.observe { event in
+				switch event {
+				case let .Completed:
+					disposable.innerDisposable = (stream as Observable<T>).observe(send)
+
+				default:
+					send(event)
+				}
+			}
+
+			return disposable
+		}
+	}
 }

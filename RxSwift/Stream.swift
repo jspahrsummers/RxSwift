@@ -49,6 +49,12 @@ class Stream<T> {
 		return .empty()
 	}
 
+	/// Concatenates the values in the given stream onto the end of the
+	/// receiver.
+	func concat(stream: Stream<T>) -> Stream<T> {
+		return .empty()
+	}
+
 	/// Lifts the given function over the values in the stream.
 	@final func map<U>(f: T -> U) -> Stream<U> {
 		return flattenScan(0) { (_, x) in (0, .single(f(x))) }
