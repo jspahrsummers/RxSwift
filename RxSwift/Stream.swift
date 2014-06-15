@@ -154,3 +154,19 @@ class Stream<T> {
 func flatten<T>(stream: Stream<Stream<T>>) -> Stream<T> {
 	return stream.flattenScan(0) { (_, s) in (0, s) }
 }
+
+/// Converts a stream of Event values back into a stream of real events.
+func dematerialize<T>(stream: Stream<Event<T>>) -> Stream<T> {
+	return stream.map { event in
+		switch event {
+		case let .Next(value):
+			return .single(value)
+
+		case let .Error(error):
+			return .error(error)
+
+		case let .Completed:
+			return .empty()
+		}
+	} |> flatten
+}
