@@ -13,7 +13,7 @@ import Foundation
 /// New observers of this stream will receive the current `value`, all future
 /// values thereafter, and then a Completed event when the property is
 /// deinitialized.
-class ObservableProperty<T>: Observable<T> {
+@final class ObservableProperty<T>: Observable<T> {
 	var _mutableClosure: () -> T
 
 	/// The value of the property.
