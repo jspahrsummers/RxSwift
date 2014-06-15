@@ -103,6 +103,14 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 		}
 	}
 
+	override class func error(error: NSError) -> AsyncSequence<T> {
+		return AsyncSequence {
+			return GeneratorOf {
+				Promise { Event.Error(error) }
+			}
+		}
+	}
+
 	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> AsyncSequence<U> {
 		return AsyncSequence<U> {
 			let g = _FlattenScanGenerator(disposable: SimpleDisposable(), scanFunc: f, valueGenerators: [], state: initial, selfGenerator: self.generate())
