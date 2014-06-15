@@ -117,4 +117,32 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 			return GeneratorOf(g)
 		}
 	}
+
+	override func concat(stream: Stream<T>) -> AsyncSequence<T> {
+		return AsyncSequence {
+			var selfGenerator = self.generate()
+			var streamGenerator = (stream as AsyncSequence<T>).generate()
+
+			return GeneratorOf {
+				if let p = selfGenerator.next() {
+					return p.then { event in
+						switch event {
+						case .Completed:
+							if let q = streamGenerator.next () {
+								return q
+							} else {
+								// Return the Completed event after all.
+								fallthrough
+							}
+
+						default:
+							return Promise { event }
+						}
+					}
+				} else {
+					return streamGenerator.next()
+				}
+			}
+		}
+	}
 }
