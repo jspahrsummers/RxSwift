@@ -146,6 +146,47 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 		}
 	}
 
+	override func zipWith<U>(stream: Stream<U>) -> AsyncSequence<(T, U)> {
+		return AsyncSequence<(T, U)> {
+			var selfGenerator = self.generate()
+			var streamGenerator = (stream as AsyncSequence<U>).generate()
+
+			return GeneratorOf {
+				let a = selfGenerator.next()
+				let b = streamGenerator.next()
+
+				if a == nil || b == nil {
+					return nil
+				}
+
+				return Promise {
+					a!.start()
+					b!.start()
+
+					switch a!.result() {
+					case let .Next(av):
+						switch b!.result() {
+						case let .Next(bv):
+							return .Next(Box(av.value, bv.value))
+
+						case let .Error(error):
+							return .Error(error)
+
+						case let .Completed:
+							return .Completed
+						}
+
+					case let .Error(error):
+						return .Error(error)
+
+					case let .Completed:
+						return .Completed
+					}
+				}
+			}
+		}
+	}
+
 	override func materialize() -> AsyncSequence<Event<T>> {
 		return AsyncSequence<Event<T>> {
 			var generator = self.generate()
