@@ -186,6 +186,22 @@ class Stream<T> {
 			}
 		}
 	}
+
+	/// Switch to the produced stream when an error occurs.
+	@final func catch(f: NSError -> Stream<T>) -> Stream<T> {
+		return materialize().flattenScan(0) { (_, event) in
+			switch event {
+			case let .Next(value):
+				return (0, .single(value))
+
+			case let .Error(error):
+				return (nil, f(error))
+
+			case let .Completed:
+				return (nil, .empty())
+			}
+		}
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
