@@ -45,6 +45,17 @@ class Stream<T> {
 		return Stream()
 	}
 
+	/// Creates a stream from the given sequence of values.
+	@final class func fromSequence(seq: SequenceOf<T>) -> Stream<T> {
+		var s = empty()
+
+		for elem in seq {
+			s = s.concat(single(elem))
+		}
+
+		return s
+	}
+
 	/// Scans over the stream, accumulating a state and mapping each value to
 	/// a new stream, then flattens all the resulting streams into one.
 	///
@@ -114,6 +125,36 @@ class Stream<T> {
 				return (0, .single(x))
 			} else {
 				return (nil, .empty())
+			}
+		}
+	}
+
+	/// Takes only the last `count` values from the stream.
+	///
+	/// If `count` is longer than the length of the stream, the entire stream is
+	/// returned.
+	@final func takeLast(count: Int) -> Stream<T> {
+		if (count == 0) {
+			return .empty()
+		}
+
+		return materialize().flattenScan([]) { (vals: T[], event) in
+			switch event {
+			case let .Next(value):
+				var newVals = vals
+				newVals.append(value)
+
+				while newVals.count > count {
+					newVals.removeAtIndex(0)
+				}
+
+				return (newVals, .empty())
+
+			case let .Error(error):
+				return (nil, .error(error))
+
+			case let .Completed:
+				return (nil, .fromSequence(SequenceOf(vals)))
 			}
 		}
 	}
