@@ -8,6 +8,66 @@
 
 import Foundation
 
+// TODO: This lives outside of the definition below because of a crash in the
+// compiler. Move it back within AsyncSequence once that's fixed.
+struct _FlattenScanGenerator<S, T, U>: Generator {
+	let disposable: Disposable
+	let scanFunc: (S, T) -> (S?, Stream<U>)
+	
+	// TODO: Thread safety
+	var valueGenerators: GeneratorOf<Promise<Event<U>>>[]
+	var state: S
+	var selfGenerator: GeneratorOf<Promise<Event<T>>>
+
+	mutating func generateStreamFromValue(x: T) {
+		let (newState, stream) = scanFunc(state, x)
+
+		if let s = newState {
+			state = s
+		} else {
+			disposable.dispose()
+		}
+
+		let seq = stream as AsyncSequence<U>
+		valueGenerators.append(seq.generate())
+	}
+
+	mutating func next() -> Promise<Event<U>>? {
+		if disposable.disposed {
+			return nil
+		}
+
+		var next = valueGenerators[0].next()
+		while next == nil {
+			valueGenerators.removeAtIndex(0)
+			if valueGenerators.isEmpty {
+				if let promise = selfGenerator.next() {
+					return promise.then { event in
+						switch event {
+						case let .Next(x):
+							self.generateStreamFromValue(x)
+							return Promise { .Completed }
+
+						case let .Completed:
+							return Promise { .Completed }
+
+						case let .Error(error):
+							self.disposable.dispose()
+							return Promise { .Error(error) }
+						}
+					}
+				} else {
+					return nil
+				}
+			}
+
+			next = valueGenerators[0].next()
+		}
+
+		return next
+	}
+}
+
 /// A consumer-driven (pull-based) stream of values.
 class AsyncSequence<T>: Stream<T>, Sequence {
 	typealias GeneratorType = GeneratorOf<Promise<Event<T>>>
@@ -38,64 +98,6 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 				Promise { Event.Next(Box(x)) },
 				Promise { Event.Completed }
 			]).generate()
-		}
-	}
-
-	struct _FlattenScanGenerator<S, U>: Generator {
-		let disposable: Disposable
-		let scanFunc: (S, T) -> (S?, Stream<U>)
-		
-		// TODO: Thread safety
-		var valueGenerators: GeneratorOf<Promise<Event<U>>>[]
-		var state: S
-		var selfGenerator: GeneratorType
-
-		mutating func generateStreamFromValue(x: T) {
-			let (newState, stream) = scanFunc(state, x)
-
-			if let s = newState {
-				state = s
-			} else {
-				disposable.dispose()
-			}
-
-			let seq = stream as AsyncSequence<U>
-			valueGenerators.append(seq.generate())
-		}
-
-		mutating func next() -> Promise<Event<U>>? {
-			if disposable.disposed {
-				return nil
-			}
-
-			var next = valueGenerators[0].next()
-			while next == nil {
-				valueGenerators.removeAtIndex(0)
-				if valueGenerators.isEmpty {
-					if let promise = selfGenerator.next() {
-						return promise.then { event in
-							switch event {
-							case let .Next(x):
-								self.generateStreamFromValue(x)
-								return Promise { .Completed }
-
-							case let .Completed:
-								return Promise { .Completed }
-
-							case let .Error(error):
-								self.disposable.dispose()
-								return Promise { .Error(error) }
-							}
-						}
-					} else {
-						return nil
-					}
-				}
-
-				next = valueGenerators[0].next()
-			}
-
-			return next
 		}
 	}
 
