@@ -88,7 +88,9 @@ class AsyncSequence<T>: Stream<T>, Sequence {
 	
 	override class func empty() -> AsyncSequence<T> {
 		return AsyncSequence {
-			return GeneratorOf { nil }
+			return GeneratorOf {
+				Promise { Event.Completed }
+			}
 		}
 	}
 
