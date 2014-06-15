@@ -40,12 +40,48 @@ class Stream<T> {
 		return Stream()
 	}
 
+	/// Creates a stream that will generate the given error.
+	class func error(error: NSError) -> Stream<T> {
+		return Stream()
+	}
+
+	/// Creates a stream from the given sequence of values.
+	@final class func fromSequence(seq: SequenceOf<T>) -> Stream<T> {
+		var s = empty()
+
+		for elem in seq {
+			s = s.concat(single(elem))
+		}
+
+		return s
+	}
+
 	/// Scans over the stream, accumulating a state and mapping each value to
 	/// a new stream, then flattens all the resulting streams into one.
 	///
 	/// This is rarely useful directly—it's just a primitive from which many
 	/// convenient stream operators can be derived.
-	func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> Stream<U> {
+	func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Stream<U> {
+		return .empty()
+	}
+
+	/// Concatenates the values in the given stream onto the end of the
+	/// receiver.
+	func concat(stream: Stream<T>) -> Stream<T> {
+		return .empty()
+	}
+
+	/// Zips the values of the given stream up with those of the receiver.
+	///
+	/// The first value of each stream will be combined, then the second value,
+	/// and so forth, until at least one of the streams is exhausted.
+	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)> {
+		return .empty()
+	}
+
+	/// Converts each of the receiver's events (including those outside of the
+	/// monad) into an Event value that can be manipulated directly.
+	func materialize() -> Stream<Event<T>> {
 		return .empty()
 	}
 
@@ -93,6 +129,36 @@ class Stream<T> {
 		}
 	}
 
+	/// Takes only the last `count` values from the stream.
+	///
+	/// If `count` is longer than the length of the stream, the entire stream is
+	/// returned.
+	@final func takeLast(count: Int) -> Stream<T> {
+		if (count == 0) {
+			return .empty()
+		}
+
+		return materialize().flattenScan([]) { (vals: T[], event) in
+			switch event {
+			case let .Next(value):
+				var newVals = vals
+				newVals.append(value)
+
+				while newVals.count > count {
+					newVals.removeAtIndex(0)
+				}
+
+				return (newVals, .empty())
+
+			case let .Error(error):
+				return (nil, .error(error))
+
+			case let .Completed:
+				return (nil, .fromSequence(SequenceOf(vals)))
+			}
+		}
+	}
+
 	/// Skips the first `count` values in the stream.
 	///
 	/// If `count` is longer than the length of the stream, an empty stream is
@@ -120,6 +186,22 @@ class Stream<T> {
 			}
 		}
 	}
+
+	/// Switch to the produced stream when an error occurs.
+	@final func catch(f: NSError -> Stream<T>) -> Stream<T> {
+		return materialize().flattenScan(0) { (_, event) in
+			switch event {
+			case let .Next(value):
+				return (0, .single(value))
+
+			case let .Error(error):
+				return (nil, f(error))
+
+			case let .Completed:
+				return (nil, .empty())
+			}
+		}
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
@@ -128,4 +210,20 @@ class Stream<T> {
 /// stream's implementation of `flattenScan()`.
 func flatten<T>(stream: Stream<Stream<T>>) -> Stream<T> {
 	return stream.flattenScan(0) { (_, s) in (0, s) }
+}
+
+/// Converts a stream of Event values back into a stream of real events.
+func dematerialize<T>(stream: Stream<Event<T>>) -> Stream<T> {
+	return stream.map { event in
+		switch event {
+		case let .Next(value):
+			return .single(value)
+
+		case let .Error(error):
+			return .error(error)
+
+		case let .Completed:
+			return .empty()
+		}
+	} |> flatten
 }
