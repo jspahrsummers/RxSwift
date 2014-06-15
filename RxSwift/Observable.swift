@@ -64,7 +64,7 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	override func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
+	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()
 			let inFlight = Atomic(1)

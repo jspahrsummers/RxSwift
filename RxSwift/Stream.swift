@@ -45,7 +45,7 @@ class Stream<T> {
 	///
 	/// This is rarely useful directly—it's just a primitive from which many
 	/// convenient stream operators can be derived.
-	func flattenScan<S, U>(initial: S, f: (S, T) -> (S?, Stream<U>)) -> Stream<U> {
+	func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Stream<U> {
 		return .empty()
 	}
 
