@@ -12,6 +12,7 @@
 		D02164F61947B3E900D34273 /* SpinLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F51947B3E900D34273 /* SpinLock.swift */; };
 		D02164F81947BC4500D34273 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F71947BC4500D34273 /* Atomic.swift */; };
 		D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164FB1947C91C00D34273 /* ArrayExtensions.swift */; };
+		D06FB18E194D6B8C007D5654 /* ObservableProperty.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06FB18D194D6B8C007D5654 /* ObservableProperty.swift */; };
 		D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */; };
 		D0CBB9E5193D1D1500C9CAF7 /* RxSwift.h in Headers */ = {isa = PBXBuildFile; fileRef = D0CBB9E4193D1D1500C9CAF7 /* RxSwift.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		D0CBB9EB193D1D1500C9CAF7 /* RxSwift.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */; };
@@ -69,6 +70,7 @@
 		D02164F51947B3E900D34273 /* SpinLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpinLock.swift; sourceTree = "<group>"; };
 		D02164F71947BC4500D34273 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		D02164FB1947C91C00D34273 /* ArrayExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArrayExtensions.swift; sourceTree = "<group>"; };
+		D06FB18D194D6B8C007D5654 /* ObservableProperty.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ObservableProperty.swift; sourceTree = "<group>"; };
 		D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NSLockingExtensions.swift; sourceTree = "<group>"; };
 		D0CBB9DF193D1D1500C9CAF7 /* RxSwift.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = RxSwift.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		D0CBB9E3193D1D1500C9CAF7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -207,6 +209,7 @@
 			children = (
 				D0F8CF1B1948F25100170790 /* AsyncSequence.swift */,
 				D0CBBA06193D2EDE00C9CAF7 /* Observable.swift */,
+				D06FB18D194D6B8C007D5654 /* ObservableProperty.swift */,
 				D0D1873F193E95EB00F937F2 /* Stream.swift */,
 			);
 			name = Streams;
@@ -379,6 +382,7 @@
 				D02164F61947B3E900D34273 /* SpinLock.swift in Sources */,
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
+				D06FB18E194D6B8C007D5654 /* ObservableProperty.swift in Sources */,
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,

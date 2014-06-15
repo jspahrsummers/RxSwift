@@ -15,18 +15,18 @@ class Box<T> {
 	/// The underlying value.
 	var value: T {
 		get {
-			return self._closure()
+			return _closure()
 		}
 	}
 	
 	/// Initializes the box to wrap the given value.
 	init(_ value: T) {
-		self._closure = { value }
+		_closure = { value }
 	}
 	
 	@conversion
 	func __conversion() -> T {
-		return self.value
+		return value
 	}
 }
 
@@ -37,17 +37,17 @@ class MutableBox<T>: Box<T> {
 	/// The underlying value.
 	override var value: T {
 		get {
-			return self._mutableClosure()
+			return _mutableClosure()
 		}
 	
 		set(newValue) {
-			self._mutableClosure = { newValue }
+			_mutableClosure = { newValue }
 		}
 	}
 	
 	/// Initializes the box to wrap the given value.
 	init(_ value: T) {
-		self._mutableClosure = { value }
+		_mutableClosure = { value }
 		super.init(value)
 	}
 }
