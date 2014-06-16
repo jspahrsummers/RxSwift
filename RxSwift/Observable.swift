@@ -55,16 +55,6 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	/// Buffers all new events into a sequence which can be enumerated
-	/// on-demand.
-	///
-	/// Returns the buffered sequence, and a disposable which can be used to
-	/// stop buffering further events.
-	func replay() -> (AsyncSequence<T>, Disposable) {
-		let buf = AsyncBuffer<T>()
-		return (buf, self.observe(buf.send))
-	}
-
 	/// Takes events from the receiver until `trigger` sends a Next or Completed
 	/// event.
 	func takeUntil<U>(trigger: Observable<U>) -> Observable<T> {

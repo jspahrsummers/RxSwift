@@ -12,8 +12,6 @@
 		D02164F61947B3E900D34273 /* SpinLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F51947B3E900D34273 /* SpinLock.swift */; };
 		D02164F81947BC4500D34273 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F71947BC4500D34273 /* Atomic.swift */; };
 		D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164FB1947C91C00D34273 /* ArrayExtensions.swift */; };
-		D05E8E26194AA06800640DB2 /* AsyncSequence.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05E8E25194AA06800640DB2 /* AsyncSequence.swift */; };
-		D05E8E2C194ADABD00640DB2 /* AsyncBuffer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D05E8E2B194ADABD00640DB2 /* AsyncBuffer.swift */; };
 		D06FB18E194D6B8C007D5654 /* ObservableProperty.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06FB18D194D6B8C007D5654 /* ObservableProperty.swift */; };
 		D06FB198194D703F007D5654 /* ControllableObservable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D06FB197194D703F007D5654 /* ControllableObservable.swift */; };
 		D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */; };
@@ -386,13 +384,11 @@
 				D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */,
 				D02164F61947B3E900D34273 /* SpinLock.swift in Sources */,
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
-				D05E8E2C194ADABD00640DB2 /* AsyncBuffer.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
 				D06FB18E194D6B8C007D5654 /* ObservableProperty.swift in Sources */,
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
-				D05E8E26194AA06800640DB2 /* AsyncSequence.swift in Sources */,
 				D0CBBA07193D2EDE00C9CAF7 /* Observable.swift in Sources */,
 				D0CBB9FC193D1D3500C9CAF7 /* Promise.swift in Sources */,
 				D0D18740193E95EB00F937F2 /* Stream.swift in Sources */,
