@@ -8,6 +8,24 @@
 
 import Foundation
 
+/// Represents an action that returns a value of type T, and which can only be
+/// run on a scheduler of type S.
+struct ScheduledAction<T, S: Scheduler> {
+	let _closure: S -> T
+
+	init(_ closure: S -> T) {
+		_closure = closure
+	}
+}
+
+@infix
+func >>=<S: Scheduler, T, U>(action: ScheduledAction<T, S>, f: T -> ScheduledAction<U, S>) -> ScheduledAction<U, S> {
+	return ScheduledAction<U, S> { scheduler in
+		let tv: T = action._closure(scheduler)
+		return f(tv)._closure(scheduler)
+	}
+}
+
 /// Represents a serial queue of work items.
 protocol Scheduler {
 	/// Enqueues an unannotated action on the scheduler.
@@ -19,25 +37,12 @@ protocol Scheduler {
 	func schedule(action: () -> ()) -> Disposable?
 }
 
-let currentSchedulerKey = "RxSwiftCurrentSchedulerKey"
-
-/// Returns the scheduler upon which the calling code is executing, if any.
-var currentScheduler: Scheduler? {
-	get {
-		return NSThread.currentThread().threadDictionary[currentSchedulerKey] as? Box<Scheduler>
-	}
+func schedule<S: Scheduler>(scheduler: S, action: ScheduledAction<(), S>) -> Disposable? {
+	return scheduler.schedule { action._closure(scheduler) }
 }
 
-/// Performs an action while setting `currentScheduler` to the given
-/// scheduler instance.
-func _asCurrentScheduler<T>(scheduler: Scheduler, action: () -> T) -> T {
-	let previousScheduler = currentScheduler
-
-	NSThread.currentThread().threadDictionary[currentSchedulerKey] = Box(scheduler)
-	let result = action()
-	NSThread.currentThread().threadDictionary[currentSchedulerKey] = Box(previousScheduler)
-
-	return result
+func getCurrentScheduler<S: Scheduler>() -> ScheduledAction<S, S> {
+	return ScheduledAction{ scheduler in scheduler }
 }
 
 /// A scheduler that performs all work synchronously.
@@ -58,7 +63,7 @@ struct MainScheduler: Scheduler {
 				return
 			}
 
-			_asCurrentScheduler(self, action)
+			action()
 		})
 
 		return d
@@ -97,7 +102,7 @@ struct QueueScheduler: Scheduler {
 				return
 			}
 			
-			_asCurrentScheduler(self, work)
+			work()
 		})
 		
 		return d
