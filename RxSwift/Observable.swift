@@ -87,7 +87,7 @@ class Observable<T>: Stream<T> {
 			let selfDisposable = self.observe { event in
 				switch event {
 				case let .Next(value):
-					latest.replace(value)
+					latest.value = value
 
 				default:
 					send(event)
@@ -141,8 +141,8 @@ class Observable<T>: Stream<T> {
 			var state = initial
 
 			func decrementInFlight() {
-				let rem = inFlight.modify { $0 - 1 }
-				if rem == 0 {
+				let orig = inFlight.modify { $0 - 1 }
+				if orig == 1 {
 					send(.Completed)
 				}
 			}
