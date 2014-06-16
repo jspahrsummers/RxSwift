@@ -19,6 +19,27 @@ protocol Scheduler {
 	func schedule(action: () -> ()) -> Disposable?
 }
 
+let currentSchedulerKey = "RxSwiftCurrentSchedulerKey"
+
+/// Returns the scheduler upon which the calling code is executing, if any.
+var currentScheduler: Scheduler? {
+	get {
+		return NSThread.currentThread().threadDictionary[currentSchedulerKey] as? Box<Scheduler>
+	}
+}
+
+/// Performs an action while setting `currentScheduler` to the given
+/// scheduler instance.
+func _asCurrentScheduler<T>(scheduler: Scheduler, action: () -> T) -> T {
+	let previousScheduler = currentScheduler
+
+	NSThread.currentThread().threadDictionary[currentSchedulerKey] = Box(scheduler)
+	let result = action()
+	NSThread.currentThread().threadDictionary[currentSchedulerKey] = Box(previousScheduler)
+
+	return result
+}
+
 /// A scheduler that performs all work synchronously.
 struct ImmediateScheduler: Scheduler {
 	func schedule(action: () -> ()) -> Disposable? {
@@ -37,7 +58,7 @@ struct MainScheduler: Scheduler {
 				return
 			}
 
-			action()
+			_asCurrentScheduler(self, action)
 		})
 
 		return d
@@ -76,7 +97,7 @@ struct QueueScheduler: Scheduler {
 				return
 			}
 			
-			work()
+			_asCurrentScheduler(self, work)
 		})
 		
 		return d
