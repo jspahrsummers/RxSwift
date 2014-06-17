@@ -142,3 +142,35 @@ enum _PromiseState<T, S: Scheduler> {
 func getCurrentScheduler<S: Scheduler>() -> Promise<S, S> {
 	return Promise { scheduler in scheduler }
 }
+
+operator prefix |- {}
+
+@prefix
+func |-<T, S>(f: @auto_closure () -> T) -> Promise<T, S> {
+	return Promise { f() }
+}
+
+@prefix
+func |-<T, S>(f: @auto_closure () -> Promise<T, S>) -> Promise<T, S> {
+	return f()
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: (T -> Promise<U, S>)) -> Promise<U, S> {
+	return p.then(f)
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: (T -> U)) -> Promise<U, S> {
+	return p.map(f)
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: @auto_closure () -> Promise<U, S>) -> Promise<U, S> {
+	return p.then { _ in f() }
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: @auto_closure () -> U) -> Promise<U, S> {
+	return p.map { _ in f() }
+}

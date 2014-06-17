@@ -58,8 +58,8 @@ class Observable<T, S: Scheduler>: Stream<T> {
 		}
 
 		return observerPromise
-			.then(self._observe)
-			.map { d in
+			| self._observe
+			| { d -> Disposable in
 				disposable.addDisposable(d)
 				return disposable
 			}
@@ -82,8 +82,8 @@ class Observable<T, S: Scheduler>: Stream<T> {
 	/// event.
 	func takeUntil<U>(trigger: Observable<U, S>) -> Observable<T, S> {
 		return Observable { send in
-			return trigger
-				.observe { event in
+			return
+				|-trigger.observe { event in
 					switch event {
 					case let .Error:
 						return Promise(())
@@ -92,10 +92,9 @@ class Observable<T, S: Scheduler>: Stream<T> {
 						return send(.Completed)
 					}
 				}
-				.then { triggerDisposable in
-					return self.observe(send).map { selfDisposable in
-						return CompositeDisposable([triggerDisposable, selfDisposable])
-					}
+				| { triggerDisposable in
+					return self.observe(send)
+						| { selfDisposable in CompositeDisposable([triggerDisposable, selfDisposable]) }
 				}
 		}
 	}
@@ -110,8 +109,8 @@ class Observable<T, S: Scheduler>: Stream<T> {
 		return Observable { send in
 			let latest: Atomic<T?> = Atomic(nil)
 
-			return self
-				.observe { event in
+			return
+				|-self.observe { event in
 					switch event {
 					case let .Next(value):
 						latest.value = value
@@ -121,9 +120,8 @@ class Observable<T, S: Scheduler>: Stream<T> {
 						return send(event)
 					}
 				}
-				.then { selfDisposable in
-					return sampler
-						.observe { event in
+				| { selfDisposable in
+						|-sampler.observe { event in
 							switch event {
 							case let .Next:
 								if let v = latest.value {
@@ -136,28 +134,30 @@ class Observable<T, S: Scheduler>: Stream<T> {
 								return Promise(())
 							}
 						}
-						.map { samplerDisposable in CompositeDisposable([selfDisposable, samplerDisposable]) }
+						| { samplerDisposable in CompositeDisposable([selfDisposable, samplerDisposable]) }
 				}
 		}
 	}
 	
 	override class func empty() -> Observable<T, S> {
 		return Observable { send in
-			return send(.Completed).map { _ in nil }
+			|-send(.Completed)
+			| nil
 		}
 	}
 	
 	override class func single(x: T) -> Observable<T, S> {
 		return Observable { send in
-			return send(.Next(Box(x)))
-				.then { send(.Completed) }
-				.map { _ in nil }
+			|-send(Event.Next(Box(x)))
+			| send(Event.Completed)
+			| nil
 		}
 	}
 
 	override class func error(error: NSError) -> Observable<T, S> {
 		return Observable { send in
-			return send(.Error(error)).map { _ in nil }
+			|-send(.Error(error))
+			| nil
 		}
 	}
 
