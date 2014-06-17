@@ -9,23 +9,19 @@
 import Foundation
 
 /// An Observable that can be manually controlled.
-///
-/// Instances of this class will automatically send Completed events to all
-/// observers upon deinitialization.
-@final class ControllableObservable<T>: Observable<T> {
+@final class ControllableObservable<T, S: Scheduler>: Observable<T, S> {
 	init() {
-		super.init({ send in
-			return nil
-		})
+		super.init({ _ in Promise(nil) })
 	}
 
-	deinit {
-		send(.Completed)
-	}
+	func send(event: Event<T>) -> Promise<(), S> {
+		var p = Promise<(), S>(())
 
-	func send(event: Event<T>) {
+		// TODO: Make sure this isn't silly.
 		for sendBox in _observers {
-			sendBox.value(event)
+			p = p.then { sendBox.value(event) }
 		}
+
+		return p
 	}
 }
