@@ -13,7 +13,7 @@ import Foundation
 /// New observers of this stream will receive the current `value`, all future
 /// values thereafter, and then a Completed event when the property is
 /// deinitialized.
-@final class ObservableProperty<T>: Observable<T> {
+@final class ObservableProperty<T>: Observable<T, ImmediateScheduler> {
 	var _mutableClosure: () -> T
 
 	/// The value of the property.
@@ -34,8 +34,7 @@ import Foundation
 		_mutableClosure = { value }
 
 		super.init({ send in
-			send(.Next(Box(value)))
-			return nil
+			return send(.Next(Box(value))).map { nil }
 		})
 	}
 
@@ -45,7 +44,7 @@ import Foundation
 
 	func _sendAll(event: Event<T>) {
 		for send in _observers {
-			send.value(event)
+			send.value(event).startOn(ImmediateScheduler())
 		}
 	}
 
