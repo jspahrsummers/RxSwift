@@ -36,6 +36,11 @@ enum _PromiseState<T, S: Scheduler> {
 		}
 	}
 
+	/// Initializes a constant promise.
+	init(_ value: T) {
+		_state = Atomic(.Resolved(Box(value)))
+	}
+
 	/// Initializes a promise that will generate a value using the given
 	/// function.
 	init(scheduledAction: S -> T) {

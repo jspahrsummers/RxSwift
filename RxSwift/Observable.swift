@@ -23,54 +23,80 @@ struct _ZipState<T> {
 	}
 }
 
-/// A producer-driven (push-based) stream of values.
-class Observable<T>: Stream<T> {
+/// A producer-driven (push-based) stream of values that will be delivered on
+/// a scheduler of type S.
+class Observable<T, S: Scheduler>: Stream<T> {
 	/// The type of a consumer for the stream's events.
-	typealias Observer = Event<T> -> ()
+	typealias Observer = Event<T> -> Promise<(), S>
 	
-	let _observe: Observer -> Disposable?
-	init(_ observe: Observer -> Disposable?) {
+	let _observe: Observer -> Promise<Disposable?, S>
+	init(_ observe: Observer -> Promise<Disposable?, S>) {
 		self._observe = observe
 	}
 	
 	let _observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
 	var _observers: Box<Observer>[] = []
  
-	/// Observes the stream for new events.
+	/// Returns a promise that will begin observing the stream for events.
+	func observe(observer: Observer) -> Promise<Disposable, S> {
+		let disposable = CompositeDisposable()
+
+		let observerPromise = Promise<Observer, S> {
+			let box = Box(observer)
+		
+			dispatch_sync(self._observerQueue, {
+				self._observers.append(box)
+			})
+			
+			disposable.addDisposable(ActionDisposable {
+				dispatch_sync(self._observerQueue, {
+					self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
+				})
+			})
+
+			return box.value
+		}
+
+		return observerPromise
+			.then(self._observe)
+			.map { d in
+				disposable.addDisposable(d)
+				return disposable
+			}
+	}
+
+	/// Begins observing the stream for new events on the given scheduler.
 	///
 	/// Returns a disposable which can be used to cease observation.
-	func observe(observer: Observer) -> Disposable {
-		let box = Box(observer)
-	
-		dispatch_sync(_observerQueue, {
-			self._observers.append(box)
-		})
-		
-		self._observe(box.value)
-		
-		return ActionDisposable {
-			dispatch_sync(self._observerQueue, {
-				self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
-			})
-		}
+	func observeOn(scheduler: S, observer: Observer) -> Disposable {
+		let disposable = SerialDisposable()
+
+		observe(observer)
+			.map { disposable.innerDisposable = $0 }
+			.startOn(scheduler)
+
+		return disposable
 	}
 
 	/// Takes events from the receiver until `trigger` sends a Next or Completed
 	/// event.
-	func takeUntil<U>(trigger: Observable<U>) -> Observable<T> {
+	func takeUntil<U>(trigger: Observable<U, S>) -> Observable<T, S> {
 		return Observable { send in
-			let triggerDisposable = trigger.observe { event in
-				switch event {
-				case let .Error:
-					// Do nothing.
-					break
+			return trigger
+				.observe { event in
+					switch event {
+					case let .Error:
+						return Promise(())
 
-				default:
-					send(.Completed)
+					default:
+						return send(.Completed)
+					}
 				}
-			}
-
-			return CompositeDisposable([triggerDisposable, self.observe(send)])
+				.then { triggerDisposable in
+					return self.observe(send).map { selfDisposable in
+						return CompositeDisposable([triggerDisposable, selfDisposable])
+					}
+				}
 		}
 	}
 
@@ -80,77 +106,87 @@ class Observable<T>: Stream<T> {
 	/// The returned observable could repeat values if `sampler` fires more
 	/// often than the receiver. Values from `sampler` are ignored before the
 	/// receiver sends its first value.
-	func sample<U>(sampler: Observable<U>) -> Observable<T> {
+	func sample<U>(sampler: Observable<U, S>) -> Observable<T, S> {
 		return Observable { send in
 			let latest: Atomic<T?> = Atomic(nil)
 
-			let selfDisposable = self.observe { event in
-				switch event {
-				case let .Next(value):
-					latest.value = value
+			return self
+				.observe { event in
+					switch event {
+					case let .Next(value):
+						latest.value = value
+						return Promise(())
 
-				default:
-					send(event)
-				}
-			}
-
-			let samplerDisposable = sampler.observe { event in
-				switch event {
-				case let .Next:
-					if let v = latest.value {
-						send(.Next(Box(v)))
+					default:
+						return send(event)
 					}
-
-				default:
-					break
 				}
-			}
+				.then { selfDisposable in
+					return sampler
+						.observe { event in
+							switch event {
+							case let .Next:
+								if let v = latest.value {
+									return send(.Next(Box(v)))
+								} else {
+									fallthrough
+								}
 
-			return CompositeDisposable([selfDisposable, samplerDisposable])
+							default:
+								return Promise(())
+							}
+						}
+						.map { samplerDisposable in CompositeDisposable([selfDisposable, samplerDisposable]) }
+				}
 		}
 	}
 	
-	override class func empty() -> Observable<T> {
+	override class func empty() -> Observable<T, S> {
 		return Observable { send in
-			send(.Completed)
-			return nil
+			return send(.Completed).map { _ in nil }
 		}
 	}
 	
-	override class func single(x: T) -> Observable<T> {
+	override class func single(x: T) -> Observable<T, S> {
 		return Observable { send in
-			send(.Next(Box(x)))
-			send(.Completed)
-			return nil
+			return send(.Next(Box(x)))
+				.then { send(.Completed) }
+				.map { _ in nil }
 		}
 	}
 
-	override class func error(error: NSError) -> Observable<T> {
+	override class func error(error: NSError) -> Observable<T, S> {
 		return Observable { send in
-			send(.Error(error))
-			return nil
+			return send(.Error(error)).map { _ in nil }
 		}
 	}
 
-	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
-		return Observable<U> { send in
-			let disposable = CompositeDisposable()
-			let inFlight = Atomic(1)
-
+	override func flattenScan<ST, U>(initial: ST, _ f: (ST, T) -> (ST?, Stream<U>)) -> Observable<U, S> {
+		return Observable<U, S> { send in
 			// TODO: Thread safety
 			var state = initial
 
-			func decrementInFlight() {
-				let orig = inFlight.modify { $0 - 1 }
-				if orig == 1 {
-					send(.Completed)
-				}
-			}
+			let inFlight = Atomic(1)
+			let disposable = CompositeDisposable()
 
 			let selfDisposable = SerialDisposable()
 			disposable.addDisposable(selfDisposable)
 
-			selfDisposable.innerDisposable = self.observe { event in
+			func decrementInFlight() -> Promise<(), S> {
+				let p = Promise<Int, S> {
+					return inFlight.modify { $0 - 1 }
+				}
+
+				return p.then { orig in
+					if orig == 1 {
+						return send(.Completed)
+					} else {
+						return Promise(())
+					}
+				}
+			}
+
+			let selfObserve = self.observe { event in
 				switch event {
 				case let .Next(value):
 					let (newState, stream) = f(state, value)
@@ -164,57 +200,66 @@ class Observable<T>: Stream<T> {
 					let streamDisposable = SerialDisposable()
 					disposable.addDisposable(streamDisposable)
 
-					streamDisposable.innerDisposable = (stream as Observable<U>).observe { event in
+					let p = (stream as Observable<U, S>).observe { event in
 						if event.isTerminating {
 							disposable.removeDisposable(streamDisposable)
 						}
 
 						switch event {
 						case let .Completed:
-							decrementInFlight()
+							return decrementInFlight()
 
 						default:
-							send(event)
+							return send(event)
 						}
 					}
 
-					break
+					return p.map { streamDisposable.innerDisposable = $0 }
 
 				case let .Error(error):
-					send(.Error(error))
+					return send(.Error(error))
 
 				case let .Completed:
-					decrementInFlight()
+					return decrementInFlight()
 				}
 			}
 
-			return disposable
+			return selfObserve.map { d in
+				selfDisposable.innerDisposable = d
+				return disposable
+			}
 		}
 	}
 
-	override func concat(stream: Stream<T>) -> Observable<T> {
+	override func concat(stream: Stream<T>) -> Observable<T, S> {
 		return Observable { send in
 			let disposable = SerialDisposable()
 
-			disposable.innerDisposable = self.observe { event in
+			let selfObserve = self.observe { event in
 				switch event {
 				case let .Completed:
-					disposable.innerDisposable = (stream as Observable<T>).observe(send)
+					let p = (stream as Observable<T, S>).observe(send)
+					return p.map { disposable.innerDisposable = $0 }
 
 				default:
-					send(event)
+					return send(event)
 				}
 			}
 
-			return disposable
+			return selfObserve.map { d in
+				disposable.innerDisposable = d
+				return disposable
+			}
 		}
 	}
 
-	override func zipWith<U>(stream: Stream<U>) -> Observable<(T, U)> {
-		return Observable<(T, U)> { send in
+	override func zipWith<U>(stream: Stream<U>) -> Observable<(T, U), S> {
+		return Observable<(T, U), S> { send in
 			let states = Atomic((_ZipState<T>(), _ZipState<U>()))
 
-			func drain() {
+			func drain() -> Promise<(), S> {
+				var p = Promise<(), S>(())
+
 				states.modify { (a, b) in
 					var av = a.values
 					var bv = b.values
@@ -224,39 +269,41 @@ class Observable<T>: Stream<T> {
 						av.removeAtIndex(0)
 						bv.removeAtIndex(0)
 
-						send(.Next(Box(v)))
+						p = p.then { send(.Next(Box(v))) }
 					}
 
 					if a.completed || b.completed {
-						send(.Completed)
+						p = p.then { send(.Completed) }
 					}
 
 					return (_ZipState(av, a.completed), _ZipState(bv, b.completed))
 				}
+
+				return p
 			}
 
-			func modifyA(f: _ZipState<T> -> _ZipState<T>) {
+			func modifyA(f: _ZipState<T> -> _ZipState<T>) -> Promise<(), S> {
 				states.modify { (a, b) in
 					var newA = f(a)
 					return (newA, b)
 				}
 
-				drain()
+				return drain()
 			}
 
-			func modifyB(f: _ZipState<U> -> _ZipState<U>) {
+			func modifyB(f: _ZipState<U> -> _ZipState<U>) -> Promise<(), S> {
 				states.modify { (a, b) in
 					var newB = f(b)
 					return (a, newB)
 				}
 
-				drain()
+				return drain()
 			}
 
-			let selfDisposable = self.observe { event in
+			let selfObserve = self.observe { event in
 				switch event {
 				case let .Next(value):
-					modifyA { s in
+					return modifyA { s in
 						var values = s.values
 						values.append(value)
 
@@ -264,17 +311,17 @@ class Observable<T>: Stream<T> {
 					}
 
 				case let .Error(error):
-					send(.Error(error))
+					return send(.Error(error))
 
 				case let .Completed:
-					modifyA { s in _ZipState(s.values, true) }
+					return modifyA { s in _ZipState(s.values, true) }
 				}
 			}
 
-			let otherDisposable = (stream as Observable<U>).observe { event in
+			let otherObserve = (stream as Observable<U, S>).observe { event in
 				switch event {
 				case let .Next(value):
-					modifyB { s in
+					return modifyB { s in
 						var values = s.values
 						values.append(value)
 
@@ -282,26 +329,35 @@ class Observable<T>: Stream<T> {
 					}
 
 				case let .Error(error):
-					send(.Error(error))
+					return send(.Error(error))
 
 				case let .Completed:
-					modifyB { s in _ZipState(s.values, true) }
+					return modifyB { s in _ZipState(s.values, true) }
 				}
 			}
 
-			return CompositeDisposable([selfDisposable, otherDisposable])
+			return selfObserve
+				.then { selfDisposable in
+					return otherObserve.map { otherDisposable in
+						return CompositeDisposable([selfDisposable, otherDisposable])
+					}
+				}
 		}
 	}
 
-	override func materialize() -> Observable<Event<T>> {
-		return Observable<Event<T>> { send in
-			return self.observe { event in
-				send(.Next(Box(event)))
+	override func materialize() -> Observable<Event<T>, S> {
+		return Observable<Event<T>, S> { send in
+			return self
+				.observe { event in
+					var p = send(.Next(Box(event)))
 
-				if event.isTerminating {
-					send(.Completed)
+					if event.isTerminating {
+						p = p.then { send(.Completed) }
+					}
+
+					return p
 				}
-			}
+				.map { d in d }
 		}
 	}
 }
