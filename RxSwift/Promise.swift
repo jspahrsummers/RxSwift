@@ -8,43 +8,89 @@
 
 import Foundation
 
-/// Represents deferred work to generate a value of type T.
-@final class Promise<T> {
-	let _queue = dispatch_queue_create("com.github.RxSwift.Promise", DISPATCH_QUEUE_CONCURRENT)
-	let _suspended = Atomic(true)
+// TODO: This lives outside of the definition below because of an infinite loop
+// in the compiler. Move it back within Promise once that's fixed.
+enum _PromiseState<T, S: Scheduler> {
+	case Unresolved(S -> T)
+	case Resolving
+	case Resolved(Box<T>)
+}
 
-	var _result: Box<T>? = nil
+/// Represents deferred work to generate a value of type T, which must run on
+/// a scheduler of type S.
+@final class Promise<T, S: Scheduler> {
+	let _state: Atomic<_PromiseState<T, S>>
+	let _notifyingGroup = dispatch_group_create()
+
+	/// Returns the generated result of the promise, or nil if it hasn't been
+	/// resolved yet.
+	var result: T? {
+		get {
+			switch _state.value {
+			case let .Resolved(result):
+				return result
+
+			default:
+				return nil
+			}
+		}
+	}
+
+	/// Initializes a constant promise.
+	init(_ value: T) {
+		_state = Atomic(.Resolved(Box(value)))
+	}
 
 	/// Initializes a promise that will generate a value using the given
-	/// function, executed upon the given queue.
-	init(_ work: () -> T, targetQueue: dispatch_queue_t = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)) {
-		dispatch_set_target_queue(self._queue, targetQueue)
-		dispatch_suspend(self._queue)
-		
-		dispatch_barrier_async(self._queue) {
-			self._result = Box(work())
-		}
+	/// function.
+	init(scheduledAction: S -> T) {
+		_state = Atomic(.Unresolved(scheduledAction))
+		dispatch_group_enter(_notifyingGroup)
 	}
-	
+
+	convenience init(_ work: () -> T) {
+		self.init(scheduledAction: { scheduler in work() })
+	}
+
 	/// Starts resolving the promise, if it hasn't been started already.
-	func start() {
-		self._suspended.modify { b in
-			if b {
-				dispatch_resume(self._queue)
+	func startOn(scheduler: S) {
+		_startOn(scheduler, shouldSchedule: true)
+	}
+
+	func _startOn(scheduler: S, shouldSchedule: Bool) {
+		let (_, maybeWork: (S -> T)?) = _state.modify { s in
+			switch s {
+			case let .Unresolved(work):
+				return (.Resolving, work)
+
+			default:
+				return (s, nil)
 			}
-			
-			return false
+		}
+
+		if let work = maybeWork {
+			let action: () -> () = {
+				let result = work(scheduler)
+				self._state.value = .Resolved(Box(result))
+
+				dispatch_group_leave(self._notifyingGroup)
+			}
+
+			if (shouldSchedule) {
+				scheduler.schedule(action)
+			} else {
+				action()
+			}
 		}
 	}
 	
-	/// Starts resolving the promise (if necessary), then blocks on the result.
-	func result() -> T {
-		self.start()
-		
-		// Wait for the work to finish.
-		dispatch_sync(self._queue) {}
-		
-		return self._result!
+	/// Blocks on the result of the promise.
+	///
+	/// This function does not actually start resolving the promise. Use startOn()
+	/// for that.
+	func await() -> T {
+		dispatch_group_wait(_notifyingGroup, DISPATCH_TIME_FOREVER)
+		return result!
 	}
 	
 	/// Enqueues the given action to be performed when the promise finishes
@@ -54,23 +100,77 @@ import Foundation
 	///
 	/// Returns a disposable that can be used to cancel the action before it
 	/// runs.
-	func whenFinished(action: T -> ()) -> Disposable {
+	func notifyOn(queue: dispatch_queue_t, _ action: T -> ()) -> Disposable {
 		let disposable = SimpleDisposable()
 		
-		dispatch_async(self._queue) {
+		dispatch_group_notify(_notifyingGroup, queue) {
 			if disposable.disposed {
 				return
 			}
 		
-			action(self._result!)
+			action(self.result!)
 		}
 		
 		return disposable
 	}
 
-	func then<U>(action: T -> Promise<U>) -> Promise<U> {
-		return Promise<U> {
-			action(self.result()).result()
-		}
+	/// Creates a promise that will resolve the receiver, then map over the
+	/// result.
+	func map<U>(f: T -> U) -> Promise<U, S> {
+		return Promise<U, S>(scheduledAction: { scheduler in
+			self._startOn(scheduler, shouldSchedule: false)
+			return f(self.result!)
+		})
 	}
+
+	/// Creates a promise that will resolve the receiver, then also the promise
+	/// returned from the given function, and yield the result of the latter.
+	func then<U>(f: T -> Promise<U, S>) -> Promise<U, S> {
+		return Promise<U, S>(scheduledAction: { scheduler in
+			self._startOn(scheduler, shouldSchedule: false)
+
+			let p = f(self.result!)
+			p._startOn(scheduler, shouldSchedule: false)
+
+			return p.result!
+		})
+	}
+}
+
+/// Returns a Promise that identifies the scheduler it is being evaluated
+/// within.
+func getCurrentScheduler<S: Scheduler>() -> Promise<S, S> {
+	return Promise { scheduler in scheduler }
+}
+
+operator prefix |- {}
+
+@prefix
+func |-<T, S>(f: @auto_closure () -> T) -> Promise<T, S> {
+	return Promise { f() }
+}
+
+@prefix
+func |-<T, S>(f: @auto_closure () -> Promise<T, S>) -> Promise<T, S> {
+	return f()
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: (T -> Promise<U, S>)) -> Promise<U, S> {
+	return p.then(f)
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: (T -> U)) -> Promise<U, S> {
+	return p.map(f)
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: @auto_closure () -> Promise<U, S>) -> Promise<U, S> {
+	return p.then { _ in f() }
+}
+
+@infix
+func |<T, U, S>(p: Promise<T, S>, f: @auto_closure () -> U) -> Promise<U, S> {
+	return p.map { _ in f() }
 }
