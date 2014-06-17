@@ -8,24 +8,6 @@
 
 import Foundation
 
-/// Represents an action that returns a value of type T, and which can only be
-/// run on a scheduler of type S.
-struct ScheduledAction<T, S: Scheduler> {
-	let _closure: S -> T
-
-	init(_ closure: S -> T) {
-		_closure = closure
-	}
-}
-
-@infix
-func >>=<S: Scheduler, T, U>(action: ScheduledAction<T, S>, f: T -> ScheduledAction<U, S>) -> ScheduledAction<U, S> {
-	return ScheduledAction<U, S> { scheduler in
-		let tv: T = action._closure(scheduler)
-		return f(tv)._closure(scheduler)
-	}
-}
-
 /// Represents a serial queue of work items.
 protocol Scheduler {
 	/// Enqueues an unannotated action on the scheduler.
@@ -35,14 +17,6 @@ protocol Scheduler {
 	/// Optionally returns a disposable that can be used to cancel the work
 	/// before it begins.
 	func schedule(action: () -> ()) -> Disposable?
-}
-
-func schedule<S: Scheduler>(scheduler: S, action: ScheduledAction<(), S>) -> Disposable? {
-	return scheduler.schedule { action._closure(scheduler) }
-}
-
-func getCurrentScheduler<S: Scheduler>() -> ScheduledAction<S, S> {
-	return ScheduledAction{ scheduler in scheduler }
 }
 
 /// A scheduler that performs all work synchronously.
