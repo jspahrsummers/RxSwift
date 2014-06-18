@@ -227,3 +227,8 @@ func dematerialize<T>(stream: Stream<Event<T>>) -> Stream<T> {
 		}
 	} |> flatten
 }
+
+/// Ignores all occurrences of a value in the given stream.
+func ignore<T: Equatable>(value: T, inStream stream: Stream<T>) -> Stream<T> {
+	return stream.filter { $0 != value }
+}
