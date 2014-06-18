@@ -37,7 +37,7 @@ class SimpleDisposable: Disposable {
 /// A disposable that will run an action upon disposal.
 class ActionDisposable: Disposable {
 	var _action: Atomic<(() -> ())?>
-	
+
 	var disposed: Bool {
 		get {
 			return _action == nil
@@ -48,9 +48,10 @@ class ActionDisposable: Disposable {
 	init(action: () -> ()) {
 		_action = Atomic(action)
 	}
-	
+
 	func dispose() {
-		_action?()
+		let action = _action.swap(nil)
+		action?()
 	}
 }
 
