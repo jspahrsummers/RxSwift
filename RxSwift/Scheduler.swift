@@ -10,7 +10,7 @@ import Foundation
 
 /// Represents a serial queue of work items.
 protocol Scheduler {
-	/// Enqueues an unannotated action on the scheduler.
+	/// Enqueues an action on the scheduler.
 	///
 	/// When the work is executed depends on the scheduler in use.
 	///
