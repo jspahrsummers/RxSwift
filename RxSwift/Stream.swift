@@ -214,9 +214,9 @@ class Stream<T> {
 
 	/// Combines each previous and current value into a new value.
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
-		return scan(initial) { (state, value) in
-			let newValue = f(state, value)
-			return (value, newValue)
+		return scan(initial) { (previous, current) in
+			let mapped = f(previous, current)
+			return (current, mapped)
 		}
 	}
 }
@@ -248,4 +248,18 @@ func dematerialize<T>(stream: Stream<Event<T>>) -> Stream<T> {
 /// Ignores all occurrences of a value in the given stream.
 func ignore<T: Equatable>(value: T, inStream stream: Stream<T>) -> Stream<T> {
 	return stream.filter { $0 != value }
+}
+
+/// Deduplicates consecutive appearances of the same value into only the first
+/// occurrence.
+func nub<T: Equatable>(stream: Stream<T>) -> Stream<T> {
+	return stream.flattenScan(nil) { (previous: T?, current) in
+		if let p = previous {
+			if p == current {
+				return (current, .empty())
+			}
+		}
+		
+		return (current, .single(current))
+	}
 }
