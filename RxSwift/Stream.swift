@@ -212,6 +212,16 @@ class Stream<T> {
 		}
 	}
 
+	/// Like scan(), but returns a stream of one value, which will be the final
+	/// accumulated state.
+	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Stream<U> {
+		let starting: Stream<U> = .single(initial)
+
+		return starting
+			.concat(scan(initial, f))
+			.takeLast(1)
+	}
+
 	/// Combines each previous and current value into a new value.
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
 		let initialState: (T, U?) = (initial, nil)
