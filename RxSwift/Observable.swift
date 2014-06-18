@@ -139,6 +139,16 @@ class Observable<T>: Stream<T> {
 			}
 		}
 	}
+
+	/// Delivers all events onto the given scheduler.
+	func deliverOn(scheduler: Scheduler) -> Observable<T> {
+		return Observable { send in
+			return self.observe { event in
+				scheduler.schedule { send(event) }
+				return ()
+			}
+		}
+	}
 	
 	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
 		return Observable<NSDate> { send in
