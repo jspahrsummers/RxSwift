@@ -202,6 +202,15 @@ class Stream<T> {
 			}
 		}
 	}
+
+	/// Scans over the stream, accumulating a state and mapping each value to
+	/// a new value.
+	@final func scan<S, U>(initial: S, _ f: (S, T) -> (S, U)) -> Stream<U> {
+		return flattenScan(initial) { (state, value) in
+			let (newState, newValue) = f(state, value)
+			return (newState, .single(newValue))
+		}
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
