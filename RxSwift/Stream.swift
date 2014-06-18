@@ -211,6 +211,14 @@ class Stream<T> {
 			return (newState, .single(newValue))
 		}
 	}
+
+	/// Combines each previous and current value into a new value.
+	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
+		return scan(initial) { (state, value) in
+			let newValue = f(state, value)
+			return (value, newValue)
+		}
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
