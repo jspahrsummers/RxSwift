@@ -282,3 +282,8 @@ func nub<T: Equatable>(stream: Stream<T>) -> Stream<T> {
 		return (current, .single(current))
 	}
 }
+
+/// Inverts all boolean values in the stream.
+@prefix func !(stream: Stream<Bool>) -> Stream<Bool> {
+	return stream.map(!)
+}
