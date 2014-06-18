@@ -119,6 +119,26 @@ class Observable<T>: Stream<T> {
 			return CompositeDisposable([selfDisposable, samplerDisposable])
 		}
 	}
+
+	/// Delays the delivery of Next and Completed events by the given interval,
+	/// on the given scheduler.
+	///
+	/// Error events are always forwarded immediately.
+	func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T> {
+		return Observable { send in
+			return self.observe { event in
+				switch event {
+				case let .Error:
+					send(event)
+
+				default:
+					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
+						send(event)
+					}
+				}
+			}
+		}
+	}
 	
 	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
 		return Observable<NSDate> { send in
