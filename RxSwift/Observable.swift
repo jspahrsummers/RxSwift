@@ -120,6 +120,15 @@ class Observable<T>: Stream<T> {
 		}
 	}
 	
+	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
+		return Observable<NSDate> { send in
+			return scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval), repeatingEvery: interval, withLeeway: leeway) {
+				let now = Box(NSDate())
+				send(.Next(now))
+			}
+		}
+	}
+	
 	override class func empty() -> Observable<T> {
 		return Observable { send in
 			send(.Completed)
