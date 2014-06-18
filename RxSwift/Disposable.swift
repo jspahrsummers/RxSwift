@@ -30,7 +30,7 @@ class SimpleDisposable: Disposable {
 	}
 	
 	func dispose() {
-		_disposed.replace(true)
+		_disposed.value = true
 	}
 }
 
@@ -76,7 +76,7 @@ class CompositeDisposable: Disposable {
 	}
 	
 	func dispose() {
-		if let ds = _disposables.replace(nil) {
+		if let ds = _disposables.swap(nil) {
 			for d in ds {
 				d.dispose()
 			}
