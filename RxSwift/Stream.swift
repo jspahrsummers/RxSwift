@@ -233,6 +233,11 @@ class Stream<T> {
 
 		return scanned.map { (_, value) in value! }
 	}
+
+	/// Ignores all Next events from the receiver.
+	@final func ignoreValues() -> Stream<T> {
+		return filter { _ in false }
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
