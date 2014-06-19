@@ -202,6 +202,42 @@ class Stream<T> {
 			}
 		}
 	}
+
+	/// Scans over the stream, accumulating a state and mapping each value to
+	/// a new value.
+	@final func scan<U>(initial: U, _ f: (U, T) -> U) -> Stream<U> {
+		return flattenScan(initial) { (state, value) in
+			let newValue = f(state, value)
+			return (newValue, .single(newValue))
+		}
+	}
+
+	/// Like scan(), but returns a stream of one value, which will be the final
+	/// accumulated state.
+	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Stream<U> {
+		let starting: Stream<U> = .single(initial)
+
+		return starting
+			.concat(scan(initial, f))
+			.takeLast(1)
+	}
+
+	/// Combines each previous and current value into a new value.
+	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
+		let initialState: (T, U?) = (initial, nil)
+		let scanned = scan(initialState) { (state, current) in
+			let (previous, _) = state
+			let mapped = f(previous, current)
+			return (current, mapped)
+		}
+
+		return scanned.map { (_, value) in value! }
+	}
+
+	/// Ignores all Next events from the receiver.
+	@final func ignoreValues() -> Stream<T> {
+		return filter { _ in false }
+	}
 }
 
 /// Flattens a stream-of-streams into a single stream of values.
@@ -226,4 +262,28 @@ func dematerialize<T>(stream: Stream<Event<T>>) -> Stream<T> {
 			return .empty()
 		}
 	} |> flatten
+}
+
+/// Ignores all occurrences of a value in the given stream.
+func ignore<T: Equatable>(value: T, inStream stream: Stream<T>) -> Stream<T> {
+	return stream.filter { $0 != value }
+}
+
+/// Deduplicates consecutive appearances of the same value into only the first
+/// occurrence.
+func nub<T: Equatable>(stream: Stream<T>) -> Stream<T> {
+	return stream.flattenScan(nil) { (previous: T?, current) in
+		if let p = previous {
+			if p == current {
+				return (current, .empty())
+			}
+		}
+		
+		return (current, .single(current))
+	}
+}
+
+/// Inverts all boolean values in the stream.
+@prefix func !(stream: Stream<Bool>) -> Stream<Bool> {
+	return stream.map(!)
 }

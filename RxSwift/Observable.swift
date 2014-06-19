@@ -8,8 +8,8 @@
 
 import Foundation
 
-// TODO: This lives outside of the definition below because of an infinite loop
-// in the compiler. Move it back within Observable once that's fixed.
+// TODO: These live outside of the definition below because of an infinite loop
+// in the compiler. Move them back within Observable once that's fixed.
 struct _ZipState<T> {
 	var values: T[] = []
 	var completed = false
@@ -19,6 +19,19 @@ struct _ZipState<T> {
 
 	init(_ values: T[], _ completed: Bool) {
 		self.values = values
+		self.completed = completed
+	}
+}
+
+struct _CombineState<T> {
+	var latestValue: T? = nil
+	var completed = false
+
+	init() {
+	}
+
+	init(_ value: T?, _ completed: Bool) {
+		self.latestValue = value
 		self.completed = completed
 	}
 }
@@ -117,6 +130,109 @@ class Observable<T>: Stream<T> {
 			}
 
 			return CompositeDisposable([selfDisposable, samplerDisposable])
+		}
+	}
+
+	/// Delays the delivery of Next and Completed events by the given interval,
+	/// on the given scheduler.
+	///
+	/// Error events are always forwarded immediately.
+	func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T> {
+		return Observable { send in
+			return self.observe { event in
+				switch event {
+				case let .Error:
+					send(event)
+
+				default:
+					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
+						send(event)
+					}
+				}
+			}
+		}
+	}
+
+	/// Delivers all events onto the given scheduler.
+	func deliverOn(scheduler: Scheduler) -> Observable<T> {
+		return Observable { send in
+			return self.observe { event in
+				scheduler.schedule { send(event) }
+				return ()
+			}
+		}
+	}
+
+	/// Creates an Observable which will send the latest value from both input
+	/// Observables, whenever either of them fire.
+	func combineLatestWith<U>(other: Observable<U>) -> Observable<(T, U)> {
+		return Observable<(T, U)> { send in
+			let states = Atomic((_CombineState<T>(), _CombineState<U>()))
+
+			func completeIfNecessary() {
+				states.withValue { (a, b) -> () in
+					if a.completed && b.completed {
+						send(.Completed)
+					}
+				}
+			}
+
+			let selfDisposable = self.observe { event in
+				switch event {
+				case let .Next(value):
+					states.modify { (_, b) in
+						let av = value
+						if let bv = b.latestValue {
+							let v: (T, U) = (av, bv)
+							send(.Next(Box(v)))
+						}
+
+						return (_CombineState(av, false), b)
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					states.modify { (a, b) in (_CombineState(a.latestValue, true), b) }
+					completeIfNecessary()
+				}
+			}
+
+			let otherDisposable = other.observe { event in
+				switch event {
+				case let .Next(value):
+					states.modify { (a, _) in
+						let bv = value
+						if let av = a.latestValue {
+							let v: (T, U) = (av, bv)
+							send(.Next(Box(v)))
+						}
+
+						return (a, _CombineState(bv, false))
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					states.modify { (a, b) in (a, _CombineState(b.latestValue, true)) }
+					completeIfNecessary()
+				}
+			}
+
+			return CompositeDisposable([selfDisposable, otherDisposable])
+		}
+	}
+	
+	/// Creates an Observable which will repeatedly send the current date at the
+	/// given interval, on the given scheduler, starting from the time of observation.
+	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
+		return Observable<NSDate> { send in
+			return scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval), repeatingEvery: interval, withLeeway: leeway) {
+				let now = Box(NSDate())
+				send(.Next(now))
+			}
 		}
 	}
 	
@@ -246,20 +362,12 @@ class Observable<T>: Stream<T> {
 			}
 
 			func modifyA(f: _ZipState<T> -> _ZipState<T>) {
-				states.modify { (a, b) in
-					var newA = f(a)
-					return (newA, b)
-				}
-
+				states.modify { (a, b) in (f(a), b) }
 				drain()
 			}
 
 			func modifyB(f: _ZipState<U> -> _ZipState<U>) {
-				states.modify { (a, b) in
-					var newB = f(b)
-					return (a, newB)
-				}
-
+				states.modify { (a, b) in (a, f(b)) }
 				drain()
 			}
 
