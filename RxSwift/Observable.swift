@@ -12,13 +12,13 @@ import Foundation
 class Observable<T>: Stream<T> {
 	typealias Observer = T -> ()
 
-	let _queue = dispatch_queue_create("com.github.ReactiveCocoa.Observable", DISPATCH_QUEUE_CONCURRENT)
-	var _current: T
-	var _observers: Box<Observer>[] = []
+	@final let _queue = dispatch_queue_create("com.github.ReactiveCocoa.Observable", DISPATCH_QUEUE_CONCURRENT)
+	@final var _current: T
+	@final var _observers: Box<Observer>[] = []
 
-	let _disposable: Disposable?
+	@final let _disposable: Disposable?
 
-	var current: T {
+	@final var current: T {
 		get {
 			var value: T? = nil
 
@@ -47,11 +47,11 @@ class Observable<T>: Stream<T> {
 		_disposable?.dispose()
 	}
 
-	class func constant(value: T) -> Observable<T> {
+	@final class func constant(value: T) -> Observable<T> {
 		return Observable(initialValue: value) { _ in nil }
 	}
 
-	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
+	@final class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
 		let startDate = NSDate()
 
 		return Observable<NSDate>(initialValue: startDate) { send in
@@ -61,7 +61,7 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	func observe(observer: Observer) -> Disposable {
+	@final func observe(observer: Observer) -> Disposable {
 		let box = Box(observer)
 
 		dispatch_barrier_sync(_queue) {
@@ -76,12 +76,12 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	func replay(count: Int) -> Enumerable<T> {
+	@final func replay(count: Int) -> Enumerable<T> {
 		// TODO
 		return .empty()
 	}
 
-	func filter(base: T, pred: T -> Bool) -> Observable<T> {
+	@final func filter(base: T, pred: T -> Bool) -> Observable<T> {
 		return Observable(initialValue: base) { send in
 			return self.observe { value in
 				if pred(value) {
@@ -91,9 +91,9 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)>
+	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)>
 
-	func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
+	@final func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
 		return Observable(initialValue: current) { send in
 			return sampler.observe { _ in send(self.current) }
 		}

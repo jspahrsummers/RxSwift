@@ -13,19 +13,19 @@ import Foundation
 class Enumerable<T>: Stream<T> {
 	typealias Enumerator = Event<T> -> ()
 
-	let _enumerate: Enumerator -> Disposable?
+	@final let _enumerate: Enumerator -> Disposable?
 	init(_ enumerate: Enumerator -> Disposable?) {
 		_enumerate = enumerate
 	}
 
-	class func empty() -> Enumerable<T> {
+	@final class func empty() -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Completed)
 			return nil
 		}
 	}
 
-	class func single(value: T) -> Enumerable<T> {
+	@final class func single(value: T) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Next(Box(value)))
 			send(.Completed)
@@ -33,22 +33,22 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	class func error(error: NSError) -> Enumerable<T> {
+	@final class func error(error: NSError) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Error(error))
 			return nil
 		}
 	}
 
-	class func never() -> Enumerable<T> {
+	@final class func never() -> Enumerable<T> {
 		return Enumerable { _ in nil }
 	}
 
-	func enumerate(enumerator: Enumerator) -> Disposable? {
+	@final func enumerate(enumerator: Enumerator) -> Disposable? {
 		return _enumerate(enumerator)
 	}
 
-	func first() -> Event<T> {
+	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
 
@@ -69,19 +69,19 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func waitUntilCompleted() -> Event<()> {
+	@final func waitUntilCompleted() -> Event<()> {
 		return ignoreValues().first()
 	}
 
-	func filter(pred: T -> Bool) -> Enumerable<T>
-	func concat(stream: Enumerable<T>) -> Enumerable<T>
-	func take(count: Int) -> Enumerable<T>
-	func takeWhile(pred: T -> Bool) -> Enumerable<T>
-	func takeLast(count: Int) -> Enumerable<T>
-	func skip(count: Int) -> Enumerable<T>
-	func skipWhile(pred: T -> Bool) -> Enumerable<T>
+	@final func filter(pred: T -> Bool) -> Enumerable<T>
+	@final func concat(stream: Enumerable<T>) -> Enumerable<T>
+	@final func take(count: Int) -> Enumerable<T>
+	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
+	@final func takeLast(count: Int) -> Enumerable<T>
+	@final func skip(count: Int) -> Enumerable<T>
+	@final func skipWhile(pred: T -> Bool) -> Enumerable<T>
 
-	func materialize() -> Enumerable<Event<T>> {
+	@final func materialize() -> Enumerable<Event<T>> {
 		return Enumerable<Event<T>> { send in
 			return self.enumerate { event in
 				send(.Next(Box(event)))
@@ -93,9 +93,9 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func dematerialize<U, EV: TypeEquality where EV.From == T, EV.To == Enumerable<Event<U>>>(ev: EV) -> Enumerable<U>
+	@final func dematerialize<U, EV: TypeEquality where EV.From == T, EV.To == Enumerable<Event<U>>>(ev: EV) -> Enumerable<U>
 
-	func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
+	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { send in
 			let serialDisposable = SerialDisposable()
 
@@ -114,9 +114,9 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
+	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 
-	func ignoreValues() -> Enumerable<()> {
+	@final func ignoreValues() -> Enumerable<()> {
 		return Enumerable<()> { send in
 			return self.enumerate { event in
 				switch event {
@@ -133,7 +133,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func doEvent(action: Event<T> -> ()) -> Enumerable<T> {
+	@final func doEvent(action: Event<T> -> ()) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
 				action(event)
@@ -142,7 +142,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func doDisposed(action: () -> ()) -> Enumerable<T> {
+	@final func doDisposed(action: () -> ()) -> Enumerable<T> {
 		return Enumerable { send in
 			let disposable = CompositeDisposable()
 			disposable.addDisposable(ActionDisposable(action))
@@ -151,10 +151,10 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	func collect() -> Enumerable<SequenceOf<T>>
-	func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
+	@final func collect() -> Enumerable<SequenceOf<T>>
+	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
 
-	func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
+	@final func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
 				scheduler.schedule { send(event) }
