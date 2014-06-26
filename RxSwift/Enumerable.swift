@@ -13,15 +13,43 @@ import Foundation
 class Enumerable<T>: Stream<T> {
 	typealias Enumerator = Event<T> -> ()
 
-	func enumerate(enumerator: Enumerator) -> Disposable
+	let _enumerate: Enumerator -> Disposable?
+	init(_ enumerate: Enumerator -> Disposable?) {
+		_enumerate = enumerate
+	}
+
+	class func empty() -> Enumerable<T> {
+		return Enumerable { send in
+			send(.Completed)
+			return nil
+		}
+	}
+
+	class func single(value: T) -> Enumerable<T> {
+		return Enumerable { send in
+			send(.Next(Box(value)))
+			send(.Completed)
+			return nil
+		}
+	}
+
+	class func error(error: NSError) -> Enumerable<T> {
+		return Enumerable { send in
+			send(.Error(error))
+			return nil
+		}
+	}
+
+	class func never() -> Enumerable<T> {
+		return Enumerable { _ in nil }
+	}
+
+	func enumerate(enumerator: Enumerator) -> Disposable? {
+		return _enumerate(enumerator)
+	}
+
 	func first() -> Event<T>
 	func waitUntilCompleted() -> Event<()>
-
-	init(_ enumerate: Enumerator -> Disposable?)
-	class func empty() -> Enumerable<T>
-	class func single(value: T) -> Enumerable<T>
-	class func error(error: NSError?) -> Enumerable<T>
-	class func never() -> Enumerable<T>
 
 	func filter(pred: T -> Bool) -> Enumerable<T>
 	func concat(stream: Enumerable<T>) -> Enumerable<T>
