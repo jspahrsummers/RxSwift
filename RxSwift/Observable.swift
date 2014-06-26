@@ -51,7 +51,15 @@ class Observable<T>: Stream<T> {
 		return Observable(initialValue: value) { _ in nil }
 	}
 
-	class func interval(interval: NSTimeInterval, onScheduler: RepeatableScheduler, withLeeway: NSTimeInterval = 0) -> Signal<NSDate>
+	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
+		let startDate = NSDate()
+
+		return Observable<NSDate>(initialValue: startDate) { send in
+			return scheduler.scheduleAfter(startDate.dateByAddingTimeInterval(interval), repeatingEvery: interval, withLeeway: leeway) {
+				send(NSDate())
+			}
+		}
+	}
 
 	func observe(observer: Observer) -> Disposable {
 		let box = Box(observer)
@@ -68,9 +76,26 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	func replay(count: Int) -> Enumerable<T>
+	func replay(count: Int) -> Enumerable<T> {
+		// TODO
+		return .empty()
+	}
 
-	func filter(base: T, pred: T -> Bool) -> Observable<T>
+	func filter(base: T, pred: T -> Bool) -> Observable<T> {
+		return Observable(initialValue: base) { send in
+			return self.observe { value in
+				if pred(value) {
+					send(value)
+				}
+			}
+		}
+	}
+
 	func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)>
-	func sampleOn<U>(sampler: Observable<U>) -> Observable<T>
+
+	func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
+		return Observable(initialValue: current) { send in
+			return sampler.observe { _ in send(self.current) }
+		}
+	}
 }

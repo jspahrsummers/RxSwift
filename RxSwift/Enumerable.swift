@@ -48,8 +48,30 @@ class Enumerable<T>: Stream<T> {
 		return _enumerate(enumerator)
 	}
 
-	func first() -> Event<T>
-	func waitUntilCompleted() -> Event<()>
+	func first() -> Event<T> {
+		let cond = NSCondition()
+		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
+
+		var event: Event<T>? = nil
+		take(1).enumerate { ev in
+			withLock(cond) {
+				event = ev
+				cond.signal()
+			}
+		}
+
+		return withLock(cond) {
+			while event == nil {
+				cond.wait()
+			}
+
+			return event!
+		}
+	}
+
+	func waitUntilCompleted() -> Event<()> {
+		return ignoreValues().first()
+	}
 
 	func filter(pred: T -> Bool) -> Enumerable<T>
 	func concat(stream: Enumerable<T>) -> Enumerable<T>
@@ -62,10 +84,18 @@ class Enumerable<T>: Stream<T> {
 	func dematerialize<U, EV: TypeEquality where EV.From == T, EV.To == Enumerable<Event<U>>>(ev: EV) -> Enumerable<U>
 	func catch(f: NSError -> Enumerable<T>) -> Enumerable<T>
 	func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
-	func ignoreValues() -> Enumerable<T>
+	func ignoreValues() -> Enumerable<()>
 	func doEvent(action: Event<T> -> ()) -> Enumerable<T>
 	func doDisposed(action: () -> ()) -> Enumerable<T>
 	func collect() -> Enumerable<SequenceOf<T>>
 	func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
-	func enumerateOn(scheduler: Scheduler) -> Enumerable<T>
+
+	func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
+		return Enumerable { send in
+			return self.enumerate { event in
+				scheduler.schedule { send(event) }
+				return ()
+			}
+		}
+	}
 }
