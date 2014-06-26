@@ -8,7 +8,7 @@
 
 import Foundation
 
-/// A push-driven stream that sends the same events to all observers.
+/// A push-driven stream that sends the same values to all observers.
 class Observable<T>: Stream<T> {
 	typealias Observer = T -> ()
 
