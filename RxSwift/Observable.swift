@@ -99,6 +99,24 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Observable<U> {
+		return Observable<U> { send in
+			let disposable = CompositeDisposable()
+
+			let selfDisposable = (evidence(self) as Observable<Stream<U>>).observe { stream in
+				let streamDisposable = (stream as Observable<U>).observe { value in
+					send(value)
+				}
+
+				// FIXME: Unbounded resource growth!
+				disposable.addDisposable(streamDisposable)
+			}
+
+			disposable.addDisposable(selfDisposable)
+			return disposable
+		}
+	}
+
 	@final func replay(count: Int) -> Enumerable<T> {
 		// TODO
 		return .empty()

@@ -13,6 +13,10 @@ class Stream<T> {
 		assert(false)
 	}
 
+	func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
+		assert(false)
+	}
+
 	func scan<U>(initial: U, _ f: (U, T) -> U) -> Stream<U>
 	func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U>
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>

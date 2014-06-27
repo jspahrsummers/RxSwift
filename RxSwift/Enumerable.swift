@@ -66,6 +66,51 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Enumerable<U> {
+		return Enumerable<U> { send in
+			let disposable = CompositeDisposable()
+			let inFlight = Atomic(1)
+
+			func decrementInFlight() {
+				let orig = inFlight.modify { $0 - 1 }
+				if orig == 1 {
+					send(.Completed)
+				}
+			}
+
+			let selfDisposable = (evidence(self) as Enumerable<Stream<U>>).enumerate { event in
+				switch event {
+				case let .Next(stream):
+					let streamDisposable = SerialDisposable()
+					disposable.addDisposable(streamDisposable)
+
+					streamDisposable.innerDisposable = (stream.value as Enumerable<U>).enumerate { event in
+						if event.isTerminating {
+							disposable.removeDisposable(streamDisposable)
+						}
+
+						switch event {
+						case let .Completed:
+							decrementInFlight()
+
+						default:
+							send(event)
+						}
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					decrementInFlight()
+				}
+			}
+
+			disposable.addDisposable(selfDisposable)
+			return disposable
+		}
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
