@@ -8,13 +8,12 @@
 
 import Foundation
 
-/// A combination push/pull stream that executes work when an enumerator is
-/// attached.
+/// A pull-driven stream that executes work when an enumerator is attached.
 class Enumerable<T>: Stream<T> {
 	typealias Enumerator = Event<T> -> ()
 
 	@final let _enumerate: Enumerator -> Disposable?
-	init(_ enumerate: Enumerator -> Disposable?) {
+	init(enumerate: Enumerator -> Disposable?) {
 		_enumerate = enumerate
 	}
 
