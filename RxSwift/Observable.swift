@@ -170,7 +170,14 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)>
+	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)> {
+		return Observable<(T, U)> { send in
+			// FIXME: This implementation is probably racey.
+			let selfDisposable = self.observe { value in send(value, stream.current) }
+			let otherDisposable = stream.observe { value in send(self.current, value) }
+			return CompositeDisposable([selfDisposable, otherDisposable])
+		}
+	}
 
 	@final func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
 		return Observable { send in
