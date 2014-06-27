@@ -229,13 +229,6 @@ class Enumerable<T>: Stream<T> {
 			.merge(identity)
 	}
 
-	@final func concat(stream: Enumerable<T>) -> Enumerable<T>
-	@final func take(count: Int) -> Enumerable<T>
-	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
-	@final func takeLast(count: Int) -> Enumerable<T>
-	@final func skip(count: Int) -> Enumerable<T>
-	@final func skipWhile(pred: T -> Bool) -> Enumerable<T>
-
 	@final func materialize() -> Enumerable<Event<T>> {
 		return Enumerable<Event<T>> { send in
 			return self.enumerate { event in
@@ -284,7 +277,6 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 
 	@final func ignoreValues() -> Enumerable<()> {
 		return Enumerable<()> { send in
@@ -321,9 +313,6 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final func collect() -> Enumerable<SequenceOf<T>>
-	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
-
 	@final func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
@@ -332,4 +321,41 @@ class Enumerable<T>: Stream<T> {
 			}
 		}
 	}
+
+	@final func take(count: Int) -> Enumerable<T> {
+		return Enumerable { send in
+			if count == 0 {
+				send(.Completed)
+				return nil
+			}
+
+			var soFar = Atomic(0)
+
+			return self.enumerate { event in
+				switch event {
+				case let .Next:
+					let orig = soFar.modify { $0 + 1 }
+
+					send(event)
+					if orig + 1 >= count {
+						send(.Completed)
+					}
+
+				default:
+					send(event)
+				}
+			}
+		}
+	}
+
+	/*
+	@final func concat(stream: Enumerable<T>) -> Enumerable<T>
+	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
+	@final func takeLast(count: Int) -> Enumerable<T>
+	@final func skip(count: Int) -> Enumerable<T>
+	@final func skipWhile(pred: T -> Bool) -> Enumerable<T>
+	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
+	@final func collect() -> Enumerable<SequenceOf<T>>
+	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
+	*/
 }

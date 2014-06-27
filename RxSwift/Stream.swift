@@ -11,18 +11,22 @@ import Foundation
 class Stream<T> {
 	func map<U>(f: T -> U) -> Stream<U> {
 		assert(false)
+		return Stream<U>()
 	}
 
 	func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
 		assert(false)
+		return Stream<U>()
 	}
 
 	func scan<U>(initial: U, _ f: (U, T) -> U) -> Stream<U> {
 		assert(false)
+		return Stream<U>()
 	}
 
 	func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
 		assert(false)
+		return Stream<U>()
 	}
 
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
@@ -36,6 +40,7 @@ class Stream<T> {
 			.map { tuple in tuple.1! }
 	}
 
+	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
 	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U>
@@ -43,4 +48,5 @@ class Stream<T> {
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
 	func deliverOn(scheduler: Scheduler) -> Stream<T>
+	*/
 }

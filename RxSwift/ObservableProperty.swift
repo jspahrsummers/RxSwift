@@ -10,7 +10,7 @@ import Foundation
 
 /// Represents a mutable property of type T along with the changes to its value.
 @final class ObservableProperty<T>: Observable<T> {
-	let _multicastObserver: Observer
+	var _multicastObserver: Observer = { _ in () }
 
 	override var current: T {
 		get {
@@ -23,10 +23,12 @@ import Foundation
 	}
 
 	init(_ value: T) {
-		super.init(initialValue: value) { observer in
-			self._multicastObserver = observer
+		super.init(generator: { send in
+			send(value)
+			self._multicastObserver = send
+
 			return nil
-		}
+		})
 	}
 
 	@conversion func __conversion() -> T {

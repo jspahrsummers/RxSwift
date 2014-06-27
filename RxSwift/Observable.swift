@@ -13,7 +13,7 @@ class Observable<T>: Stream<T> {
 	typealias Observer = T -> ()
 
 	@final let _queue = dispatch_queue_create("com.github.ReactiveCocoa.Observable", DISPATCH_QUEUE_CONCURRENT)
-	@final var _current: T? = nil
+	@final var _current: Box<T>? = nil
 	@final var _observers: Box<Observer>[] = []
 
 	@final var _disposable: Disposable? = nil
@@ -35,7 +35,7 @@ class Observable<T>: Stream<T> {
 
 		_disposable = generator { value in
 			dispatch_barrier_sync(self._queue) {
-				self._current = value
+				self._current = Box(value)
 
 				for sendBox in self._observers {
 					sendBox.value(value)
