@@ -202,6 +202,21 @@ class Enumerable<T>: Stream<T> {
 		return ignoreValues().first()
 	}
 
+	@final func bindToProperty(property: ObservableProperty<T>) -> Disposable {
+		return self.enumerate { event in
+			switch event {
+			case let .Next(value):
+				property.current = value
+
+			case let .Error(error):
+				assert(false)
+
+			default:
+				break
+			}
+		}
+	}
+
 	@final func filter(pred: T -> Bool) -> Enumerable<T> {
 		return self
 			.map { value in
