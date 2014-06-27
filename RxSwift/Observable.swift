@@ -18,7 +18,7 @@ class Observable<T>: Stream<T> {
 
 	@final let _disposable: Disposable?
 
-	@final var current: T {
+	var current: T {
 		get {
 			var value: T? = nil
 
