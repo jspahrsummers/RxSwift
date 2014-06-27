@@ -136,7 +136,18 @@ class Enumerable<T>: Stream<T> {
 		return ignoreValues().first()
 	}
 
-	@final func filter(pred: T -> Bool) -> Enumerable<T>
+	@final func filter(pred: T -> Bool) -> Enumerable<T> {
+		return self
+			.map { value in
+				if pred(value) {
+					return Enumerable.single(value)
+				} else {
+					return Enumerable.empty()
+				}
+			}
+			.merge(identity)
+	}
+
 	@final func concat(stream: Enumerable<T>) -> Enumerable<T>
 	@final func take(count: Int) -> Enumerable<T>
 	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
@@ -156,7 +167,22 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U>
+	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U> {
+		return Enumerable<U> { send in
+			return evidence(self).enumerate { event in
+				switch event {
+				case let .Next(innerEvent):
+					send(innerEvent)
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					send(.Completed)
+				}
+			}
+		}
+	}
 
 	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { send in
