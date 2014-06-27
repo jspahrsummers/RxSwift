@@ -13,6 +13,7 @@
 		D02164F81947BC4500D34273 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F71947BC4500D34273 /* Atomic.swift */; };
 		D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164FB1947C91C00D34273 /* ArrayExtensions.swift */; };
 		D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */; };
+		D0B4C717195D2528000142DE /* Identity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0B4C716195D2528000142DE /* Identity.swift */; };
 		D0BEB84E195BEB8000A985F7 /* Observable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEB84D195BEB8000A985F7 /* Observable.swift */; };
 		D0BEB850195BECE300A985F7 /* Enumerable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEB84F195BECE300A985F7 /* Enumerable.swift */; };
 		D0BEB852195BFBD900A985F7 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0BEB851195BFBD900A985F7 /* Stream.swift */; };
@@ -69,6 +70,7 @@
 		D02164F71947BC4500D34273 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		D02164FB1947C91C00D34273 /* ArrayExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArrayExtensions.swift; sourceTree = "<group>"; };
 		D0A6EA6919481E3400649636 /* NSLockingExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NSLockingExtensions.swift; sourceTree = "<group>"; };
+		D0B4C716195D2528000142DE /* Identity.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Identity.swift; sourceTree = "<group>"; };
 		D0BEB84D195BEB8000A985F7 /* Observable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Observable.swift; sourceTree = "<group>"; };
 		D0BEB84F195BECE300A985F7 /* Enumerable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Enumerable.swift; sourceTree = "<group>"; };
 		D0BEB851195BFBD900A985F7 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
@@ -149,7 +151,7 @@
 				D0F8CF101948E50C00170790 /* Concurrency Primitives */,
 				D0F8CF181948E58C00170790 /* Resource Management */,
 				D0F8CF161948E53200170790 /* Streams */,
-				D0F8CF171948E53E00170790 /* Value Types */,
+				D0F8CF171948E53E00170790 /* Utilities */,
 				D0CBB9E2193D1D1500C9CAF7 /* Supporting Files */,
 			);
 			path = RxSwift;
@@ -203,19 +205,20 @@
 			isa = PBXGroup;
 			children = (
 				D0BEB84F195BECE300A985F7 /* Enumerable.swift */,
+				D0CBB9FD193D236A00C9CAF7 /* Event.swift */,
 				D0BEB84D195BEB8000A985F7 /* Observable.swift */,
 				D0BEB851195BFBD900A985F7 /* Stream.swift */,
 			);
 			name = Streams;
 			sourceTree = "<group>";
 		};
-		D0F8CF171948E53E00170790 /* Value Types */ = {
+		D0F8CF171948E53E00170790 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
 				D0F8CF1D1948F33600170790 /* Box.swift */,
-				D0CBB9FD193D236A00C9CAF7 /* Event.swift */,
+				D0B4C716195D2528000142DE /* Identity.swift */,
 			);
-			name = "Value Types";
+			name = Utilities;
 			sourceTree = "<group>";
 		};
 		D0F8CF181948E58C00170790 /* Resource Management */ = {
@@ -378,6 +381,7 @@
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
 				D0BEB84E195BEB8000A985F7 /* Observable.swift in Sources */,
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
+				D0B4C717195D2528000142DE /* Identity.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
 				D02164F81947BC4500D34273 /* Atomic.swift in Sources */,
