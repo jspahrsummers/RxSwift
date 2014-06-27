@@ -30,8 +30,9 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	init(initialValue: T, generator: Observer -> Disposable?) {
-		_current = initialValue
+	init(generator: Observer -> Disposable?) {
+		var generatedOnce = false
+
 		_disposable = generator { value in
 			dispatch_barrier_sync(self._queue) {
 				self._current = value
@@ -40,7 +41,18 @@ class Observable<T>: Stream<T> {
 					sendBox.value(value)
 				}
 			}
+
+			generatedOnce = true
 		}
+
+		assert(generatedOnce)
+	}
+	
+	convenience init(initialValue: T, generator: Observer -> Disposable?) {
+		self.init(generator: { send in
+			send(initialValue)
+			return generator(send)
+		})
 	}
 
 	deinit {
@@ -48,7 +60,10 @@ class Observable<T>: Stream<T> {
 	}
 
 	@final class func constant(value: T) -> Observable<T> {
-		return Observable(initialValue: value) { _ in nil }
+		return Observable { send in
+			send(value)
+			return nil
+		}
 	}
 
 	@final class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
@@ -76,11 +91,8 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	// FIXME: A lot of the below operators need to skip the initial value sent
-	// upon observation.
-
 	@final override func map<U>(f: T -> U) -> Observable<U> {
-		return Observable<U>(initialValue: f(self.current)) { send in
+		return Observable<U> { send in
 			return self.observe { value in
 				send(f(value))
 			}
@@ -105,7 +117,7 @@ class Observable<T>: Stream<T> {
 	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)>
 
 	@final func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
-		return Observable(initialValue: current) { send in
+		return Observable { send in
 			return sampler.observe { _ in send(self.current) }
 		}
 	}
