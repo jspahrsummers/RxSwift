@@ -21,7 +21,17 @@ class Stream<T> {
 		assert(false)
 	}
 
-	func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U>
+	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
+		let initialTuple: (T, U?) = (initial, nil)
+
+		return self
+			.scan(initialTuple) { (tuple, next) in
+				let value = f(tuple.0, next)
+				return (next, value)
+			}
+			.map { tuple in tuple.1! }
+	}
+
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
 	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U>
