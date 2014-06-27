@@ -133,6 +133,51 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Enumerable<U> {
+		return Enumerable<U> { send in
+			let selfCompleted = Atomic(false)
+			let latestCompleted = Atomic(false)
+
+			func completeIfNecessary() {
+				if selfCompleted.value && latestCompleted.value {
+					send(.Completed)
+				}
+			}
+
+			let compositeDisposable = CompositeDisposable()
+
+			let latestDisposable = SerialDisposable()
+			compositeDisposable.addDisposable(latestDisposable)
+
+			let selfDisposable = (evidence(self) as Enumerable<Stream<U>>).enumerate { event in
+				switch event {
+				case let .Next(stream):
+					latestDisposable.innerDisposable = nil
+					latestDisposable.innerDisposable = (stream.value as Enumerable<U>).enumerate { innerEvent in
+						switch innerEvent {
+						case let .Completed:
+							latestCompleted.value = true
+							completeIfNecessary()
+
+						default:
+							send(innerEvent)
+						}
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					selfCompleted.value = true
+					completeIfNecessary()
+				}
+			}
+
+			compositeDisposable.addDisposable(selfDisposable)
+			return compositeDisposable
+		}
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"

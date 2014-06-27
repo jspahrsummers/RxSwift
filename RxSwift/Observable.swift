@@ -130,6 +130,23 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Observable<U> {
+		return Observable<U> { send in
+			let compositeDisposable = CompositeDisposable()
+
+			let latestDisposable = SerialDisposable()
+			compositeDisposable.addDisposable(latestDisposable)
+
+			let selfDisposable = (evidence(self) as Observable<Stream<U>>).observe { stream in
+				latestDisposable.innerDisposable = nil
+				latestDisposable.innerDisposable = (stream as Observable<U>).observe { value in send(value) }
+			}
+
+			compositeDisposable.addDisposable(selfDisposable)
+			return compositeDisposable
+		}
+	}
+
 	@final func replay(count: Int) -> Enumerable<T> {
 		// TODO
 		return .empty()

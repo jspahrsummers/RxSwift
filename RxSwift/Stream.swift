@@ -21,6 +21,10 @@ class Stream<T> {
 		assert(false)
 	}
 
+	func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
+		assert(false)
+	}
+
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
 		let initialTuple: (T, U?) = (initial, nil)
 
@@ -38,6 +42,5 @@ class Stream<T> {
 	func delay(interval: NSTimeInterval) -> Stream<T>
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
-	func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U>
 	func deliverOn(scheduler: Scheduler) -> Stream<T>
 }
