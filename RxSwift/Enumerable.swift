@@ -48,6 +48,24 @@ class Enumerable<T>: Stream<T> {
 		return _enumerate(enumerator)
 	}
 
+	@final override func map<U>(f: T -> U) -> Enumerable<U> {
+		return Enumerable { send in
+			return self.enumerate { event in
+				switch event {
+				case let .Next(value):
+					let mapped = f(value)
+					send(.Next(Box(mapped)))
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					send(.Completed)
+				}
+			}
+		}
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"

@@ -76,6 +76,17 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	// FIXME: A lot of the below operators need to skip the initial value sent
+	// upon observation.
+
+	@final override func map<U>(f: T -> U) -> Observable<U> {
+		return Observable(initialValue: f(self.current)) { send in
+			return self.observe { value in
+				send(f(value))
+			}
+		}
+	}
+
 	@final func replay(count: Int) -> Enumerable<T> {
 		// TODO
 		return .empty()
