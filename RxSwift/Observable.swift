@@ -117,6 +117,19 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func scan<U>(initial: U, _ f: (U, T) -> U) -> Observable<U> {
+		return Observable<U> { send in
+			var state = initial
+
+			return self.observe { value in
+				let result = f(state, value)
+
+				state = result
+				send(result)
+			}
+		}
+	}
+
 	@final func replay(count: Int) -> Enumerable<T> {
 		// TODO
 		return .empty()

@@ -111,6 +111,28 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func scan<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U> {
+		return Enumerable<U> { send in
+			var state = initial
+
+			return self.enumerate { event in
+				switch event {
+				case let .Next(value):
+					let result = f(state, value)
+
+					state = result
+					send(.Next(Box(result)))
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					send(.Completed)
+				}
+			}
+		}
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
