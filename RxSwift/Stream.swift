@@ -21,10 +21,10 @@ class Stream<T> {
 	func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U>
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
-	func skipRepeats<U: Equatable, EV: TypeEquality where EV.From == T, EV.To == Stream<U>>(ev: EV) -> Stream<U>
+	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U>
 	func delay(interval: NSTimeInterval) -> Stream<T>
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
-	func switchToLatest<U, EV: TypeEquality where EV.From == T, EV.To == Stream<Stream<U>>>(ev: EV) -> Stream<U>
+	func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U>
 	func deliverOn(scheduler: Scheduler) -> Stream<T>
 }

@@ -156,7 +156,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final func dematerialize<U, EV: TypeEquality where EV.From == T, EV.To == Enumerable<Event<U>>>(ev: EV) -> Enumerable<U>
+	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U>
 
 	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { send in
