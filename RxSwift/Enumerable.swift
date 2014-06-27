@@ -202,7 +202,7 @@ class Enumerable<T>: Stream<T> {
 		return ignoreValues().first()
 	}
 
-	@final func bindToProperty(property: ObservableProperty<T>) -> Disposable {
+	@final func bindToProperty(property: ObservableProperty<T>) -> Disposable? {
 		return self.enumerate { event in
 			switch event {
 			case let .Next(value):

@@ -147,9 +147,19 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final func replay(count: Int) -> Enumerable<T> {
-		// TODO
-		return .empty()
+	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
+		let enumerable = EnumerableBuffer<T>(capacity: capacity)
+
+		let observationDisposable = self.observe { value in
+			enumerable.send(.Next(Box(value)))
+		}
+
+		let bufferDisposable = ActionDisposable {
+			observationDisposable.dispose()
+			enumerable.send(.Completed)
+		}
+
+		return (enumerable, bufferDisposable)
 	}
 
 	@final func filter(base: T, pred: T -> Bool) -> Observable<T> {
