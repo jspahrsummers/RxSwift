@@ -49,7 +49,7 @@ class Enumerable<T>: Stream<T> {
 	}
 
 	@final override func map<U>(f: T -> U) -> Enumerable<U> {
-		return Enumerable { send in
+		return Enumerable<U> { send in
 			return self.enumerate { event in
 				switch event {
 				case let .Next(value):

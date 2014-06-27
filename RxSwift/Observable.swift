@@ -80,7 +80,7 @@ class Observable<T>: Stream<T> {
 	// upon observation.
 
 	@final override func map<U>(f: T -> U) -> Observable<U> {
-		return Observable(initialValue: f(self.current)) { send in
+		return Observable<U>(initialValue: f(self.current)) { send in
 			return self.observe { value in
 				send(f(value))
 			}
