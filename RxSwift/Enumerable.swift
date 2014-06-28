@@ -208,12 +208,16 @@ class Enumerable<T>: Stream<T> {
 		return super.scan(initialValue, f) as Enumerable<U>
 	}
 
-	@final override func filter(pred: T -> Bool) -> Enumerable<T?> {
-		return super.filter(pred) as Enumerable<T?>
-	}
-
 	@final func filter(pred: T -> Bool) -> Enumerable<T> {
-		return filter(pred)._removeNil(identity)
+		return self
+			.map { value -> Enumerable<T> in
+				if pred(value) {
+					return .unit(value)
+				} else {
+					return .empty()
+				}
+			}
+			.merge(identity)
 	}
 
 	@final override func take(count: Int) -> Enumerable<T> {

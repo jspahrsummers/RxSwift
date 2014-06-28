@@ -178,13 +178,15 @@ class Observable<T>: Stream<T> {
 		return super.scan(initialValue, f) as Observable<U>
 	}
 
-	@final override func filter(pred: T -> Bool) -> Observable<T?> {
-		return super.filter(pred) as Observable<T?>
-	}
-
 	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
 		return self
-			.filter(pred)
+			.map { value in
+				if pred(value) {
+					return value
+				} else {
+					return nil
+				}
+			}
 			.removeNil(identity, initialValue: initialValue)
 	}
 

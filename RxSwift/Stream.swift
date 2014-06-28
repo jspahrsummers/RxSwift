@@ -60,10 +60,6 @@ class Stream<T> {
 		}
 	}
 
-	func filter(pred: T -> Bool) -> Stream<T?> {
-		return map { value in (pred(value) ? value : nil) }
-	}
-
 	func take(count: Int) -> Stream<T> {
 		return mapAccumulate(0) { (n, value) in
 			let newN: Int? = (n + 1 < count ? n + 1 : nil)
