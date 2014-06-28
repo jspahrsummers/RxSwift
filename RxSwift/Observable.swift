@@ -249,4 +249,13 @@ class Observable<T>: Stream<T> {
 			}
 		}
 	}
+
+	@final func deliverOn(scheduler: Scheduler) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { send in
+			return self.observe { value in
+				scheduler.schedule { send(value) }
+				return ()
+			}
+		}
+	}
 }

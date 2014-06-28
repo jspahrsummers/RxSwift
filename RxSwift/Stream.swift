@@ -98,6 +98,5 @@ class Stream<T> {
 	func mergeWith(stream: Stream<T>) -> Stream<T>
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
-	func deliverOn(scheduler: Scheduler) -> Stream<T>
 	*/
 }

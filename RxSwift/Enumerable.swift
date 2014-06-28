@@ -463,6 +463,15 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final func deliverOn(scheduler: Scheduler) -> Enumerable<T> {
+		return Enumerable { send in
+			return self.enumerate { event in
+				scheduler.schedule { send(event) }
+				return ()
+			}
+		}
+	}
+
 	/*
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
 	*/
