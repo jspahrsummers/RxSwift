@@ -167,6 +167,10 @@ class Observable<T>: Stream<T> {
 		return super.take(count) as Observable<T>
 	}
 
+	@final override func takeWhileThenNil(pred: T -> Bool) -> Observable<T?> {
+		return super.takeWhileThenNil(pred) as Observable<T?>
+	}
+
 	@final override func combinePrevious(initialValue: T) -> Observable<(T, T)> {
 		return super.combinePrevious(initialValue) as Observable<(T, T)>
 	}

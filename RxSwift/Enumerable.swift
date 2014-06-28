@@ -198,6 +198,14 @@ class Enumerable<T>: Stream<T> {
 		return super.take(count) as Enumerable<T>
 	}
 
+	@final override func takeWhileThenNil(pred: T -> Bool) -> Enumerable<T?> {
+		return super.takeWhileThenNil(pred) as Enumerable<T?>
+	}
+
+	@final func takeWhile(pred: T -> Bool) -> Enumerable<T> {
+		return takeWhileThenNil(pred).removeNil(identity)
+	}
+
 	@final override func combinePrevious(initialValue: T) -> Enumerable<(T, T)> {
 		return super.combinePrevious(initialValue) as Enumerable<(T, T)>
 	}
@@ -395,7 +403,6 @@ class Enumerable<T>: Stream<T> {
 	}
 
 	/*
-	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
 	@final func takeLast(count: Int) -> Enumerable<T>
 	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 	@final func collect() -> Enumerable<SequenceOf<T>>

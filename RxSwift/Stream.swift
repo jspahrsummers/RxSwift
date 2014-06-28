@@ -57,6 +57,16 @@ class Stream<T> {
 		}
 	}
 
+	func takeWhileThenNil(pred: T -> Bool) -> Stream<T?> {
+		return mapAccumulate(true) { (taking, value) in
+			if taking && pred(value) {
+				return (true, value)
+			} else {
+				return (nil, nil)
+			}
+		}
+	}
+
 	func combinePrevious(initialValue: T) -> Stream<(T, T)> {
 		return mapAccumulate(initialValue) { (previous, current) in
 			return (current, (previous, current))
