@@ -402,8 +402,37 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final func takeLast(count: Int) -> Enumerable<T> {
+		return Enumerable { send in
+			let values: Atomic<T[]> = Atomic([])
+
+			return self.enumerate { event in
+				switch event {
+				case let .Next(value):
+					values.modify { (var arr) in
+						arr.append(value)
+						while arr.count > count {
+							arr.removeAtIndex(0)
+						}
+
+						return arr
+					}
+
+				case let .Completed:
+					for v in values.value {
+						send(.Next(Box(v)))
+					}
+
+					send(.Completed)
+
+				default:
+					send(event)
+				}
+			}
+		}
+	}
+
 	/*
-	@final func takeLast(count: Int) -> Enumerable<T>
 	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 	@final func collect() -> Enumerable<SequenceOf<T>>
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
