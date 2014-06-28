@@ -154,6 +154,22 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Observable<U> {
+		return Observable<U> { send in
+			let maybePrevious = Atomic<U?>(nil)
+
+			return (evidence(self) as Observable<U>).observe { current in
+				if let previous = maybePrevious.swap(current) {
+					if current == previous {
+						return
+					}
+				}
+
+				send(current)
+			}
+		}
+	}
+
 	@final override func map<U>(f: T -> U) -> Observable<U> {
 		return super.map(f) as Observable<U>
 	}

@@ -186,6 +186,20 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Enumerable<U> {
+		return (evidence(self) as Enumerable<U>)
+			.mapAccumulate(nil) { (maybePrevious: U?, current: U) -> (U??, Enumerable<U>) in
+				if let previous = maybePrevious {
+					if current == previous {
+						return (current, .empty())
+					}
+				}
+
+				return (current, .unit(current))
+			}
+			.merge(identity)
+	}
+
 	@final override func map<U>(f: T -> U) -> Enumerable<U> {
 		return super.map(f) as Enumerable<U>
 	}

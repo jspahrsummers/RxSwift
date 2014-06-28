@@ -38,6 +38,11 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
+	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U> {
+		assert(false)
+		return Stream<U>()
+	}
+
 	/*
 	 * EXTENDED OPERATORS
 	 */
@@ -75,7 +80,6 @@ class Stream<T> {
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
-	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U>
 	func delay(interval: NSTimeInterval) -> Stream<T>
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
