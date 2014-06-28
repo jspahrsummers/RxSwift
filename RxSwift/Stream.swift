@@ -66,18 +66,11 @@ class Stream<T> {
 		}
 	}
 
-	/*
-	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
-		let initialTuple: (T, U?) = (initial, nil)
-
-		return self
-			.scan(initialTuple) { (tuple, next) in
-				let value = f(tuple.0, next)
-				return (next, value)
-			}
-			.map { tuple in tuple.1! }
+	func combinePrevious(initialValue: T) -> Stream<(T, T)> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			return (current, (previous, current))
+		}
 	}
-	*/
 
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>

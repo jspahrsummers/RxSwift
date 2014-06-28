@@ -177,6 +177,10 @@ class Observable<T>: Stream<T> {
 		return super.take(count) as Observable<T>
 	}
 
+	@final override func combinePrevious(initialValue: T) -> Observable<(T, T)> {
+		return super.combinePrevious(initialValue) as Observable<(T, T)>
+	}
+
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
 		let enumerable = EnumerableBuffer<T>(capacity: capacity)
 

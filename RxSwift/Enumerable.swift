@@ -210,6 +210,10 @@ class Enumerable<T>: Stream<T> {
 		return super.take(count) as Enumerable<T>
 	}
 
+	@final override func combinePrevious(initialValue: T) -> Enumerable<(T, T)> {
+		return super.combinePrevious(initialValue) as Enumerable<(T, T)>
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
