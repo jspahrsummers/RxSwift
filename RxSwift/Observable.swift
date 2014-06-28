@@ -87,27 +87,7 @@ class Observable<T> {
 		}
 	}
 
-	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Observable<U> {
-		return Observable<U> { send in
-			let state = Atomic(initialState)
-			let selfDisposable = SerialDisposable()
-
-			selfDisposable.innerDisposable = self.observe { value in
-				let (maybeState, newValue) = f(state, value)
-				send(newValue)
-
-				if let s = maybeState {
-					state.value = s
-				} else {
-					selfDisposable.dispose()
-				}
-			}
-
-			return selfDisposable
-		}
-	}
-
-	@final func removeNil<U>(evidence: Observable<T> -> Observable<U?>, initialValue: U) -> Observable<U> {
+	@final func ignoreNil<U>(evidence: Observable<T> -> Observable<U?>, initialValue: U) -> Observable<U> {
 		return Observable<U>(initialValue: initialValue) { send in
 			return evidence(self).observe { maybeValue in
 				if let value = maybeValue {
@@ -153,59 +133,92 @@ class Observable<T> {
 	}
 
 	@final func map<U>(f: T -> U) -> Observable<U> {
-		return mapAccumulate(()) { (_, value) in
-			return ((), f(value))
+		return Observable<U> { send in
+			return self.observe { value in send(f(value)) }
 		}
 	}
 
 	@final func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Observable<U> {
-		return mapAccumulate(initialValue) { (previous, current) in
-			let mapped = f(previous, current)
-			return (mapped, mapped)
+		let previous = Atomic(initialValue)
+
+		return Observable<U> { send in
+			return self.observe { value in
+				let newValue = f(previous.value, value)
+				send(newValue)
+
+				previous.value = newValue
+			}
 		}
 	}
 
 	@final func take(count: Int) -> Observable<T> {
 		assert(count > 0)
 
-		return mapAccumulate(0) { (n, value) in
-			let newN: Int? = (n + 1 < count ? n + 1 : nil)
-			return (newN, value)
+		let soFar = Atomic(0)
+
+		return Observable { send in
+			let selfDisposable = SerialDisposable()
+
+			selfDisposable.innerDisposable = self.observe { value in
+				let orig = soFar.modify { $0 + 1 }
+				if orig < count {
+					send(value)
+				} else {
+					selfDisposable.dispose()
+				}
+			}
+
+			return selfDisposable
 		}
 	}
 
-	@final func takeWhileThenNil(pred: T -> Bool) -> Observable<T?> {
-		return mapAccumulate(true) { (taking, value) in
-			if taking && pred(value) {
-				return (true, value)
-			} else {
-				return (nil, nil)
+	@final func takeWhile(initialValue: T, _ pred: T -> Bool) -> Observable<T> {
+		return Observable(initialValue: initialValue) { send in
+			let selfDisposable = SerialDisposable()
+
+			selfDisposable.innerDisposable = self.observe { value in
+				if pred(value) {
+					send(value)
+				} else {
+					selfDisposable.dispose()
+				}
 			}
+
+			return selfDisposable
 		}
 	}
 
 	@final func combinePrevious(initialValue: T) -> Observable<(T, T)> {
-		return mapAccumulate(initialValue) { (previous, current) in
-			return (current, (previous, current))
-		}
-	}
+		let previous = Atomic(initialValue)
 
-	@final func skipAsNil(count: Int) -> Observable<T?> {
-		return mapAccumulate(0) { (n, value) in
-			if n >= count {
-				return (count, value)
-			} else {
-				return (n + 1, nil)
+		return Observable<(T, T)> { send in
+			return self.observe { value in
+				let orig = previous.swap(value)
+				send((orig, value))
 			}
 		}
 	}
 
-	@final func skipAsNilWhile(pred: T -> Bool) -> Observable<T?> {
-		return mapAccumulate(true) { (skipping, value) in
-			if !skipping || !pred(value) {
-				return (false, value)
-			} else {
-				return (true, nil)
+	@final func skip(count: Int) -> Observable<T?> {
+		let soFar = Atomic(0)
+
+		return skipWhile { _ in
+			let orig = soFar.modify { $0 + 1 }
+			return orig < count
+		}
+	}
+
+	@final func skipWhile(pred: T -> Bool) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { send in
+			let skipping = Atomic(true)
+
+			return self.observe { value in
+				if skipping.value && pred(value) {
+					send(nil)
+				} else {
+					skipping.value = false
+					send(value)
+				}
 			}
 		}
 	}
@@ -226,15 +239,13 @@ class Observable<T> {
 	}
 
 	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
-		return self
-			.map { value in
+		return Observable(initialValue: initialValue) { send in
+			return self.observe { value in
 				if pred(value) {
-					return value
-				} else {
-					return nil
+					send(value)
 				}
 			}
-			.removeNil(identity, initialValue: initialValue)
+		}
 	}
 
 	@final func skipRepeats<U: Equatable>(evidence: Observable<T> -> Observable<U>) -> Observable<U> {
