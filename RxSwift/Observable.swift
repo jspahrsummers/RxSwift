@@ -89,11 +89,23 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func map<U>(f: T -> U) -> Observable<U> {
+	@final override func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Observable<U> {
 		return Observable<U> { send in
-			return self.observe { value in
-				send(f(value))
+			let state = Atomic(initialState)
+			let selfDisposable = SerialDisposable()
+
+			selfDisposable.innerDisposable = self.observe { value in
+				let (maybeState, newValue) = f(state, value)
+				send(newValue)
+
+				if let s = maybeState {
+					state.value = s
+				} else {
+					selfDisposable.dispose()
+				}
 			}
+
+			return selfDisposable
 		}
 	}
 
@@ -112,19 +124,6 @@ class Observable<T>: Stream<T> {
 
 			disposable.addDisposable(selfDisposable)
 			return disposable
-		}
-	}
-
-	@final override func scan<U>(initial: U, _ f: (U, T) -> U) -> Observable<U> {
-		return Observable<U> { send in
-			var state = initial
-
-			return self.observe { value in
-				let result = f(state, value)
-
-				state = result
-				send(result)
-			}
 		}
 	}
 

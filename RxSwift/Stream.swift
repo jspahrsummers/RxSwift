@@ -9,12 +9,17 @@
 import Foundation
 
 class Stream<T> {
-	func map<U>(f: T -> U) -> Stream<U> {
 	class func unit(value: T) -> Stream<T> {
 		assert(false)
 		return Stream()
 	}
 
+	func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Stream<U> {
+		assert(false)
+		return Stream<U>()
+	}
+
+	func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Stream<U> {
 		assert(false)
 		return Stream<U>()
 	}
@@ -24,16 +29,20 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
-	func scan<U>(initial: U, _ f: (U, T) -> U) -> Stream<U> {
-		assert(false)
-		return Stream<U>()
-	}
-
 	func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
 		assert(false)
 		return Stream<U>()
 	}
 
+	// TODO: Burn the below
+
+	@final func map<U>(f: T -> U) -> Stream<U> {
+		return mapAccumulate(nil) { (_, value) in
+			return (nil, f(value))
+		}
+	}
+
+	/*
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
 		let initialTuple: (T, U?) = (initial, nil)
 
@@ -44,6 +53,7 @@ class Stream<T> {
 			}
 			.map { tuple in tuple.1! }
 	}
+	*/
 
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>

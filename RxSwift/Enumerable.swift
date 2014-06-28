@@ -47,13 +47,21 @@ class Enumerable<T>: Stream<T> {
 		return _enumerate(enumerator)
 	}
 
-	@final override func map<U>(f: T -> U) -> Enumerable<U> {
+	@final override func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
 		return Enumerable<U> { send in
+			let state = Atomic(initialState)
+
 			return self.enumerate { event in
 				switch event {
 				case let .Next(value):
-					let mapped = f(value)
-					send(.Next(Box(mapped)))
+					let (maybeState, newValue) = f(state, value)
+					send(.Next(Box(newValue)))
+
+					if let s = maybeState {
+						state.value = s
+					} else {
+						send(.Completed)
+					}
 
 				case let .Error(error):
 					send(.Error(error))
@@ -107,28 +115,6 @@ class Enumerable<T>: Stream<T> {
 
 			disposable.addDisposable(selfDisposable)
 			return disposable
-		}
-	}
-
-	@final override func scan<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U> {
-		return Enumerable<U> { send in
-			var state = initial
-
-			return self.enumerate { event in
-				switch event {
-				case let .Next(value):
-					let result = f(state, value)
-
-					state = result
-					send(.Next(Box(result)))
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					send(.Completed)
-				}
-			}
 		}
 	}
 
