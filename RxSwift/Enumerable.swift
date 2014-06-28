@@ -194,6 +194,14 @@ class Enumerable<T>: Stream<T> {
 		return super.scan(initialValue, f) as Enumerable<U>
 	}
 
+	@final override func filter(pred: T -> Bool) -> Enumerable<T?> {
+		return super.filter(pred) as Enumerable<T?>
+	}
+
+	@final func filter(pred: T -> Bool) -> Enumerable<T> {
+		return filter(pred)._removeNil(identity)
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
@@ -232,18 +240,6 @@ class Enumerable<T>: Stream<T> {
 				break
 			}
 		}
-	}
-
-	@final func filter(pred: T -> Bool) -> Enumerable<T> {
-		return self
-			.map { value in
-				if pred(value) {
-					return Enumerable.unit(value)
-				} else {
-					return Enumerable.empty()
-				}
-			}
-			.merge(identity)
 	}
 
 	@final func materialize() -> Enumerable<Event<T>> {

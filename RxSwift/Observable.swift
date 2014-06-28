@@ -162,6 +162,16 @@ class Observable<T>: Stream<T> {
 		return super.scan(initialValue, f) as Observable<U>
 	}
 
+	@final override func filter(pred: T -> Bool) -> Observable<T?> {
+		return super.filter(pred) as Observable<T?>
+	}
+
+	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
+		return self
+			.filter(pred)
+			.removeNil(identity, initialValue: initialValue)
+	}
+
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
 		let enumerable = EnumerableBuffer<T>(capacity: capacity)
 
@@ -175,16 +185,6 @@ class Observable<T>: Stream<T> {
 		}
 
 		return (enumerable, bufferDisposable)
-	}
-
-	@final func filter(base: T, pred: T -> Bool) -> Observable<T> {
-		return Observable(initialValue: base) { send in
-			return self.observe { value in
-				if pred(value) {
-					send(value)
-				}
-			}
-		}
 	}
 
 	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)> {

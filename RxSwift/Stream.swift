@@ -55,6 +55,10 @@ class Stream<T> {
 		}
 	}
 
+	func filter(pred: T -> Bool) -> Stream<T?> {
+		return map { value in (pred(value) ? value : nil) }
+	}
+
 	/*
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
 		let initialTuple: (T, U?) = (initial, nil)
