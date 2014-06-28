@@ -172,6 +172,11 @@ class Observable<T>: Stream<T> {
 			.removeNil(identity, initialValue: initialValue)
 	}
 
+	@final override func take(count: Int) -> Observable<T> {
+		assert(count > 0)
+		return super.take(count) as Observable<T>
+	}
+
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
 		let enumerable = EnumerableBuffer<T>(capacity: capacity)
 

@@ -59,6 +59,13 @@ class Stream<T> {
 		return map { value in (pred(value) ? value : nil) }
 	}
 
+	func take(count: Int) -> Stream<T> {
+		return mapAccumulate(0) { (n, value) in
+			let newN: Int? = (n + 1 < count ? n + 1 : nil)
+			return (newN, value)
+		}
+	}
+
 	/*
 	@final func combinePrevious<U>(initial: T, f: (T, T) -> U) -> Stream<U> {
 		let initialTuple: (T, U?) = (initial, nil)

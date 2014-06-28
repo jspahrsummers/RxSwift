@@ -202,6 +202,14 @@ class Enumerable<T>: Stream<T> {
 		return filter(pred)._removeNil(identity)
 	}
 
+	@final override func take(count: Int) -> Enumerable<T> {
+		if count == 0 {
+			return .empty()
+		}
+
+		return super.take(count) as Enumerable<T>
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
@@ -290,7 +298,6 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-
 	@final func ignoreValues() -> Enumerable<()> {
 		return Enumerable<()> { send in
 			return self.enumerate { event in
@@ -331,32 +338,6 @@ class Enumerable<T>: Stream<T> {
 			return self.enumerate { event in
 				scheduler.schedule { send(event) }
 				return ()
-			}
-		}
-	}
-
-	@final func take(count: Int) -> Enumerable<T> {
-		return Enumerable { send in
-			if count == 0 {
-				send(.Completed)
-				return nil
-			}
-
-			var soFar = Atomic(0)
-
-			return self.enumerate { event in
-				switch event {
-				case let .Next:
-					let orig = soFar.modify { $0 + 1 }
-
-					send(event)
-					if orig + 1 >= count {
-						send(.Completed)
-					}
-
-				default:
-					send(event)
-				}
 			}
 		}
 	}
