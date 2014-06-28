@@ -154,40 +154,12 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Observable<U> {
-		return Observable<U> { send in
-			let maybePrevious = Atomic<U?>(nil)
-
-			return (evidence(self) as Observable<U>).observe { current in
-				if let previous = maybePrevious.swap(current) {
-					if current == previous {
-						return
-					}
-				}
-
-				send(current)
-			}
-		}
-	}
-
 	@final override func map<U>(f: T -> U) -> Observable<U> {
 		return super.map(f) as Observable<U>
 	}
 
 	@final override func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Observable<U> {
 		return super.scan(initialValue, f) as Observable<U>
-	}
-
-	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
-		return self
-			.map { value in
-				if pred(value) {
-					return value
-				} else {
-					return nil
-				}
-			}
-			.removeNil(identity, initialValue: initialValue)
 	}
 
 	@final override func take(count: Int) -> Observable<T> {
@@ -212,6 +184,34 @@ class Observable<T>: Stream<T> {
 		}
 
 		return (enumerable, bufferDisposable)
+	}
+
+	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
+		return self
+			.map { value in
+				if pred(value) {
+					return value
+				} else {
+					return nil
+				}
+			}
+			.removeNil(identity, initialValue: initialValue)
+	}
+
+	@final func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Observable<U> {
+		return Observable<U> { send in
+			let maybePrevious = Atomic<U?>(nil)
+
+			return (evidence(self) as Observable<U>).observe { current in
+				if let previous = maybePrevious.swap(current) {
+					if current == previous {
+						return
+					}
+				}
+
+				send(current)
+			}
+		}
 	}
 
 	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)> {

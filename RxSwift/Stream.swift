@@ -38,11 +38,6 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
-	func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Stream<U> {
-		assert(false)
-		return Stream<U>()
-	}
-
 	/*
 	 * EXTENDED OPERATORS
 	 */

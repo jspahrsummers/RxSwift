@@ -186,38 +186,12 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Enumerable<U> {
-		return (evidence(self) as Enumerable<U>)
-			.mapAccumulate(nil) { (maybePrevious: U?, current: U) -> (U??, Enumerable<U>) in
-				if let previous = maybePrevious {
-					if current == previous {
-						return (current, .empty())
-					}
-				}
-
-				return (current, .unit(current))
-			}
-			.merge(identity)
-	}
-
 	@final override func map<U>(f: T -> U) -> Enumerable<U> {
 		return super.map(f) as Enumerable<U>
 	}
 
 	@final override func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
 		return super.scan(initialValue, f) as Enumerable<U>
-	}
-
-	@final func filter(pred: T -> Bool) -> Enumerable<T> {
-		return self
-			.map { value -> Enumerable<T> in
-				if pred(value) {
-					return .unit(value)
-				} else {
-					return .empty()
-				}
-			}
-			.merge(identity)
 	}
 
 	@final override func take(count: Int) -> Enumerable<T> {
@@ -270,6 +244,32 @@ class Enumerable<T>: Stream<T> {
 				break
 			}
 		}
+	}
+
+	@final func filter(pred: T -> Bool) -> Enumerable<T> {
+		return self
+			.map { value -> Enumerable<T> in
+				if pred(value) {
+					return .unit(value)
+				} else {
+					return .empty()
+				}
+			}
+			.merge(identity)
+	}
+
+	@final func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Enumerable<U> {
+		return (evidence(self) as Enumerable<U>)
+			.mapAccumulate(nil) { (maybePrevious: U?, current: U) -> (U??, Enumerable<U>) in
+				if let previous = maybePrevious {
+					if current == previous {
+						return (current, .empty())
+					}
+				}
+
+				return (current, .unit(current))
+			}
+			.merge(identity)
 	}
 
 	@final func materialize() -> Enumerable<Event<T>> {
