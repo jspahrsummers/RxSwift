@@ -96,7 +96,6 @@ class Stream<T> {
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
-	func delay(interval: NSTimeInterval) -> Stream<T>
 	func throttle(interval: NSTimeInterval) -> Stream<T>
 	func takeUntilReplacement(stream: Stream<T>) -> Stream<T>
 	func deliverOn(scheduler: Scheduler) -> Stream<T>

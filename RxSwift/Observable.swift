@@ -240,4 +240,13 @@ class Observable<T>: Stream<T> {
 			return sampler.observe { _ in send(self.current) }
 		}
 	}
+
+	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { send in
+			return self.observe { value in
+				scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) { send(value) }
+				return ()
+			}
+		}
+	}
 }

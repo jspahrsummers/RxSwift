@@ -449,6 +449,20 @@ class Enumerable<T>: Stream<T> {
 			.map { SequenceOf($0) }
 	}
 
+	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
+		return Enumerable { send in
+			return self.enumerate { event in
+				switch event {
+				case let .Error:
+					scheduler.schedule { send(event) }
+
+				default:
+					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) { send(event) }
+				}
+			}
+		}
+	}
+
 	/*
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
 	*/
