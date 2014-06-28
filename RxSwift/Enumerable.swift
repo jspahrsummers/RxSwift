@@ -73,25 +73,6 @@ class Enumerable<T> {
 		}
 	}
 
-	@final func removeNil<U>(evidence: Enumerable<T> -> Enumerable<U?>) -> Enumerable<U> {
-		return Enumerable<U> { send in
-			return evidence(self).enumerate { event in
-				switch event {
-				case let .Next(maybeValue):
-					if let value = maybeValue.value {
-						send(.Next(Box(value)))
-					}
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					send(.Completed)
-				}
-			}
-		}
-	}
-
 	@final func merge<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let disposable = CompositeDisposable()
