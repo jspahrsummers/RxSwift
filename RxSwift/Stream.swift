@@ -10,6 +10,11 @@ import Foundation
 
 class Stream<T> {
 	func map<U>(f: T -> U) -> Stream<U> {
+	class func unit(value: T) -> Stream<T> {
+		assert(false)
+		return Stream()
+	}
+
 		assert(false)
 		return Stream<U>()
 	}

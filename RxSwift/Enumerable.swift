@@ -24,7 +24,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final class func single(value: T) -> Enumerable<T> {
+	@final override class func unit(value: T) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Next(Box(value)))
 			send(.Completed)
@@ -221,7 +221,7 @@ class Enumerable<T>: Stream<T> {
 		return self
 			.map { value in
 				if pred(value) {
-					return Enumerable.single(value)
+					return Enumerable.unit(value)
 				} else {
 					return Enumerable.empty()
 				}

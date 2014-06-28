@@ -57,13 +57,6 @@ class Observable<T>: Stream<T> {
 		_disposable?.dispose()
 	}
 
-	@final class func constant(value: T) -> Observable<T> {
-		return Observable { send in
-			send(value)
-			return nil
-		}
-	}
-
 	@final class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
 		let startDate = NSDate()
 
@@ -86,6 +79,13 @@ class Observable<T>: Stream<T> {
 			dispatch_barrier_async(self._queue) {
 				self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
 			}
+		}
+	}
+
+	@final override class func unit(value: T) -> Observable<T> {
+		return Observable { send in
+			send(value)
+			return nil
 		}
 	}
 
