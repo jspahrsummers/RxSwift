@@ -9,7 +9,7 @@
 import Foundation
 
 /// A pull-driven stream that executes work when an enumerator is attached.
-class Enumerable<T>: Stream<T> {
+class Enumerable<T> {
 	typealias Enumerator = Event<T> -> ()
 
 	@final let _enumerate: Enumerator -> Disposable?
@@ -24,7 +24,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override class func unit(value: T) -> Enumerable<T> {
+	@final class func single(value: T) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Next(Box(value)))
 			send(.Completed)
@@ -47,7 +47,7 @@ class Enumerable<T>: Stream<T> {
 		return _enumerate(enumerator)
 	}
 
-	@final override func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
+	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let state = Atomic(initialState)
 
@@ -92,7 +92,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Enumerable<U> {
+	@final func merge<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let disposable = CompositeDisposable()
 			let inFlight = Atomic(1)
@@ -104,13 +104,13 @@ class Enumerable<T>: Stream<T> {
 				}
 			}
 
-			let selfDisposable = (evidence(self) as Enumerable<Stream<U>>).enumerate { event in
+			let selfDisposable = evidence(self).enumerate { event in
 				switch event {
 				case let .Next(stream):
 					let streamDisposable = SerialDisposable()
 					disposable.addDisposable(streamDisposable)
 
-					streamDisposable.innerDisposable = (stream.value as Enumerable<U>).enumerate { event in
+					streamDisposable.innerDisposable = stream.value.enumerate { event in
 						if event.isTerminating {
 							disposable.removeDisposable(streamDisposable)
 						}
@@ -137,7 +137,7 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Enumerable<U> {
+	@final func switchToLatest<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let selfCompleted = Atomic(false)
 			let latestCompleted = Atomic(false)
@@ -153,11 +153,11 @@ class Enumerable<T>: Stream<T> {
 			let latestDisposable = SerialDisposable()
 			compositeDisposable.addDisposable(latestDisposable)
 
-			let selfDisposable = (evidence(self) as Enumerable<Stream<U>>).enumerate { event in
+			let selfDisposable = evidence(self).enumerate { event in
 				switch event {
 				case let .Next(stream):
 					latestDisposable.innerDisposable = nil
-					latestDisposable.innerDisposable = (stream.value as Enumerable<U>).enumerate { innerEvent in
+					latestDisposable.innerDisposable = stream.value.enumerate { innerEvent in
 						switch innerEvent {
 						case let .Completed:
 							latestCompleted.value = true
@@ -182,48 +182,70 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override func map<U>(f: T -> U) -> Enumerable<U> {
-		return super.map(f) as Enumerable<U>
+	@final func map<U>(f: T -> U) -> Enumerable<U> {
+		return mapAccumulate(()) { (_, value) in
+			return ((), f(value))
+		}
 	}
 
-	@final override func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
-		return super.scan(initialValue, f) as Enumerable<U>
+	@final func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			let mapped = f(previous, current)
+			return (mapped, mapped)
+		}
 	}
 
-	@final override func take(count: Int) -> Enumerable<T> {
+	@final func take(count: Int) -> Enumerable<T> {
 		if count == 0 {
 			return .empty()
 		}
 
-		return super.take(count) as Enumerable<T>
-	}
-
-	@final override func takeWhileThenNil(pred: T -> Bool) -> Enumerable<T?> {
-		return super.takeWhileThenNil(pred) as Enumerable<T?>
+		return mapAccumulate(0) { (n, value) in
+			let newN: Int? = (n + 1 < count ? n + 1 : nil)
+			return (newN, value)
+		}
 	}
 
 	@final func takeWhile(pred: T -> Bool) -> Enumerable<T> {
-		return takeWhileThenNil(pred).removeNil(identity)
+		return self
+			.mapAccumulate(true) { (taking, value) in
+				if taking && pred(value) {
+					return (true, .single(value))
+				} else {
+					return (nil, .empty())
+				}
+			}
+			.merge(identity)
 	}
 
-	@final override func combinePrevious(initialValue: T) -> Enumerable<(T, T)> {
-		return super.combinePrevious(initialValue) as Enumerable<(T, T)>
-	}
-
-	@final override func skipAsNil(count: Int) -> Enumerable<T?> {
-		return super.skipAsNil(count) as Enumerable<T?>
+	@final func combinePrevious(initialValue: T) -> Enumerable<(T, T)> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			return (current, (previous, current))
+		}
 	}
 
 	@final func skip(count: Int) -> Enumerable<T> {
-		return skipAsNil(count).removeNil(identity)
-	}
-
-	@final override func skipAsNilWhile(pred: T -> Bool) -> Enumerable<T?> {
-		return super.skipAsNilWhile(pred) as Enumerable<T?>
+		return self
+			.mapAccumulate(0) { (n, value) in
+				if n >= count {
+					return (count, .single(value))
+				} else {
+					return (n + 1, .empty())
+				}
+			}
+			.merge(identity)
 	}
 
 	@final func skipWhile(pred: T -> Bool) -> Enumerable<T> {
-		return skipAsNilWhile(pred).removeNil(identity)
+		return self
+			.mapAccumulate(true) { (skipping, value) in
+				if !skipping || !pred(value) {
+					return (false, .single(value))
+				} else {
+					return (true, .empty())
+				}
+			}
+			.merge(identity)
 	}
 
 	@final func first() -> Event<T> {
@@ -270,7 +292,7 @@ class Enumerable<T>: Stream<T> {
 		return self
 			.map { value -> Enumerable<T> in
 				if pred(value) {
-					return .unit(value)
+					return .single(value)
 				} else {
 					return .empty()
 				}
@@ -278,8 +300,8 @@ class Enumerable<T>: Stream<T> {
 			.merge(identity)
 	}
 
-	@final func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Enumerable<U> {
-		return (evidence(self) as Enumerable<U>)
+	@final func skipRepeats<U: Equatable>(evidence: Enumerable<T> -> Enumerable<U>) -> Enumerable<U> {
+		return evidence(self)
 			.mapAccumulate(nil) { (maybePrevious: U?, current: U) -> (U??, Enumerable<U>) in
 				if let previous = maybePrevious {
 					if current == previous {
@@ -287,7 +309,7 @@ class Enumerable<T>: Stream<T> {
 					}
 				}
 
-				return (current, .unit(current))
+				return (current, .single(current))
 			}
 			.merge(identity)
 	}
@@ -435,7 +457,7 @@ class Enumerable<T>: Stream<T> {
 	@final func aggregate<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
 		let scanned = scan(initialValue, f)
 
-		return Enumerable<U>.unit(initialValue)
+		return Enumerable<U>.single(initialValue)
 			.concat(scanned)
 			.takeLast(1)
 	}

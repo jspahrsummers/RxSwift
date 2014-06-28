@@ -9,7 +9,7 @@
 import Foundation
 
 /// A push-driven stream that sends the same values to all observers.
-class Observable<T>: Stream<T> {
+class Observable<T> {
 	typealias Observer = T -> ()
 
 	@final let _queue = dispatch_queue_create("com.github.ReactiveCocoa.Observable", DISPATCH_QUEUE_CONCURRENT)
@@ -31,8 +31,6 @@ class Observable<T>: Stream<T> {
 	}
 
 	init(generator: Observer -> Disposable?) {
-		super.init()
-
 		_disposable = generator { value in
 			dispatch_barrier_sync(self._queue) {
 				self._current = Box(value)
@@ -82,14 +80,14 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override class func unit(value: T) -> Observable<T> {
+	@final class func constant(value: T) -> Observable<T> {
 		return Observable { send in
 			send(value)
 			return nil
 		}
 	}
 
-	@final override func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Observable<U> {
+	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Observable<U> {
 		return Observable<U> { send in
 			let state = Atomic(initialState)
 			let selfDisposable = SerialDisposable()
@@ -119,12 +117,12 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Observable<U> {
+	@final func merge<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()
 
-			let selfDisposable = (evidence(self) as Observable<Stream<U>>).observe { stream in
-				let streamDisposable = (stream as Observable<U>).observe { value in
+			let selfDisposable = evidence(self).observe { stream in
+				let streamDisposable = stream.observe { value in
 					send(value)
 				}
 
@@ -137,16 +135,16 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func switchToLatest<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Observable<U> {
+	@final func switchToLatest<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
 		return Observable<U> { send in
 			let compositeDisposable = CompositeDisposable()
 
 			let latestDisposable = SerialDisposable()
 			compositeDisposable.addDisposable(latestDisposable)
 
-			let selfDisposable = (evidence(self) as Observable<Stream<U>>).observe { stream in
+			let selfDisposable = evidence(self).observe { stream in
 				latestDisposable.innerDisposable = nil
-				latestDisposable.innerDisposable = (stream as Observable<U>).observe { value in send(value) }
+				latestDisposable.innerDisposable = stream.observe { value in send(value) }
 			}
 
 			compositeDisposable.addDisposable(selfDisposable)
@@ -154,33 +152,62 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func map<U>(f: T -> U) -> Observable<U> {
-		return super.map(f) as Observable<U>
+	@final func map<U>(f: T -> U) -> Observable<U> {
+		return mapAccumulate(()) { (_, value) in
+			return ((), f(value))
+		}
 	}
 
-	@final override func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Observable<U> {
-		return super.scan(initialValue, f) as Observable<U>
+	@final func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Observable<U> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			let mapped = f(previous, current)
+			return (mapped, mapped)
+		}
 	}
 
-	@final override func take(count: Int) -> Observable<T> {
+	@final func take(count: Int) -> Observable<T> {
 		assert(count > 0)
-		return super.take(count) as Observable<T>
+
+		return mapAccumulate(0) { (n, value) in
+			let newN: Int? = (n + 1 < count ? n + 1 : nil)
+			return (newN, value)
+		}
 	}
 
-	@final override func takeWhileThenNil(pred: T -> Bool) -> Observable<T?> {
-		return super.takeWhileThenNil(pred) as Observable<T?>
+	@final func takeWhileThenNil(pred: T -> Bool) -> Observable<T?> {
+		return mapAccumulate(true) { (taking, value) in
+			if taking && pred(value) {
+				return (true, value)
+			} else {
+				return (nil, nil)
+			}
+		}
 	}
 
-	@final override func combinePrevious(initialValue: T) -> Observable<(T, T)> {
-		return super.combinePrevious(initialValue) as Observable<(T, T)>
+	@final func combinePrevious(initialValue: T) -> Observable<(T, T)> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			return (current, (previous, current))
+		}
 	}
 
-	@final override func skipAsNil(count: Int) -> Observable<T?> {
-		return super.skipAsNil(count) as Observable<T?>
+	@final func skipAsNil(count: Int) -> Observable<T?> {
+		return mapAccumulate(0) { (n, value) in
+			if n >= count {
+				return (count, value)
+			} else {
+				return (n + 1, nil)
+			}
+		}
 	}
 
-	@final override func skipAsNilWhile(pred: T -> Bool) -> Observable<T?> {
-		return super.skipAsNilWhile(pred) as Observable<T?>
+	@final func skipAsNilWhile(pred: T -> Bool) -> Observable<T?> {
+		return mapAccumulate(true) { (skipping, value) in
+			if !skipping || !pred(value) {
+				return (false, value)
+			} else {
+				return (true, nil)
+			}
+		}
 	}
 
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
@@ -210,11 +237,11 @@ class Observable<T>: Stream<T> {
 			.removeNil(identity, initialValue: initialValue)
 	}
 
-	@final func skipRepeats<U: Equatable>(evidence: Stream<T> -> Stream<U>) -> Observable<U> {
+	@final func skipRepeats<U: Equatable>(evidence: Observable<T> -> Observable<U>) -> Observable<U> {
 		return Observable<U> { send in
 			let maybePrevious = Atomic<U?>(nil)
 
-			return (evidence(self) as Observable<U>).observe { current in
+			return evidence(self).observe { current in
 				if let previous = maybePrevious.swap(current) {
 					if current == previous {
 						return
