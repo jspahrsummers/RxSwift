@@ -73,13 +73,9 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
-	@final override func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Enumerable<U> {
-		return Enumerable<U>.unit(initialValue).concat(_removeNil(evidence))
-	}
-
-	@final func _removeNil<U>(evidence: Stream<T> -> Stream<U?>) -> Enumerable<U> {
+	@final func removeNil<U>(evidence: Enumerable<T> -> Enumerable<U?>) -> Enumerable<U> {
 		return Enumerable<U> { send in
-			return (evidence(self) as Enumerable<U?>).enumerate { event in
+			return evidence(self).enumerate { event in
 				switch event {
 				case let .Next(maybeValue):
 					if let value = maybeValue.value {
@@ -211,7 +207,7 @@ class Enumerable<T>: Stream<T> {
 	}
 
 	@final func skip(count: Int) -> Enumerable<T> {
-		return skipAsNil(count)._removeNil(identity)
+		return skipAsNil(count).removeNil(identity)
 	}
 
 	@final override func skipAsNilWhile(pred: T -> Bool) -> Enumerable<T?> {
@@ -219,7 +215,7 @@ class Enumerable<T>: Stream<T> {
 	}
 
 	@final func skipWhile(pred: T -> Bool) -> Enumerable<T> {
-		return skipAsNilWhile(pred)._removeNil(identity)
+		return skipAsNilWhile(pred).removeNil(identity)
 	}
 
 	@final func first() -> Event<T> {

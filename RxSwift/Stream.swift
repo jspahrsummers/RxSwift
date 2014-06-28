@@ -23,11 +23,6 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
-	func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Stream<U> {
-		assert(false)
-		return Stream<U>()
-	}
-
 	func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Stream<U> {
 		assert(false)
 		return Stream<U>()

@@ -109,9 +109,9 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
-	@final override func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Observable<U> {
+	@final func removeNil<U>(evidence: Observable<T> -> Observable<U?>, initialValue: U) -> Observable<U> {
 		return Observable<U>(initialValue: initialValue) { send in
-			return (evidence(self) as Observable<U?>).observe { maybeValue in
+			return evidence(self).observe { maybeValue in
 				if let value = maybeValue {
 					send(value)
 				}
