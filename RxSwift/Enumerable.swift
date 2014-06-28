@@ -365,8 +365,25 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final func concat(stream: Enumerable<T>) -> Enumerable<T> {
+		return Enumerable { send in
+			let serialDisposable = SerialDisposable()
+
+			serialDisposable.innerDisposable = self.enumerate { event in
+				switch event {
+				case let .Completed:
+					serialDisposable.innerDisposable = stream.enumerate(send)
+
+				default:
+					send(event)
+				}
+			}
+
+			return serialDisposable
+		}
+	}
+
 	/*
-	@final func concat(stream: Enumerable<T>) -> Enumerable<T>
 	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
 	@final func takeLast(count: Int) -> Enumerable<T>
 	@final func skip(count: Int) -> Enumerable<T>
