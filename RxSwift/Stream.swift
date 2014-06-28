@@ -9,6 +9,10 @@
 import Foundation
 
 class Stream<T> {
+	/*
+	 * REQUIRED PRIMITIVES
+	 */
+
 	class func unit(value: T) -> Stream<T> {
 		assert(false)
 		return Stream()
@@ -34,9 +38,20 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
+	/*
+	 * EXTENDED OPERATORS
+	 */
+
 	func map<U>(f: T -> U) -> Stream<U> {
 		return mapAccumulate(nil) { (_, value) in
 			return (nil, f(value))
+		}
+	}
+
+	func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Stream<U> {
+		return mapAccumulate(initialValue) { (previous, current) in
+			let mapped = f(previous, current)
+			return (mapped, mapped)
 		}
 	}
 
