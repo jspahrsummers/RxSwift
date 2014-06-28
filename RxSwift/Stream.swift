@@ -68,6 +68,16 @@ class Stream<T> {
 		}
 	}
 
+	func skipAsNil(count: Int) -> Stream<T?> {
+		return mapAccumulate(0) { (n, value) in
+			if n >= count {
+				return (count, value)
+			} else {
+				return (n + 1, nil)
+			}
+		}
+	}
+
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
