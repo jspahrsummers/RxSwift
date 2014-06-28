@@ -214,6 +214,14 @@ class Enumerable<T>: Stream<T> {
 		return skipAsNil(count)._removeNil(identity)
 	}
 
+	@final override func skipAsNilWhile(pred: T -> Bool) -> Enumerable<T?> {
+		return super.skipAsNilWhile(pred) as Enumerable<T?>
+	}
+
+	@final func skipWhile(pred: T -> Bool) -> Enumerable<T> {
+		return skipAsNilWhile(pred)._removeNil(identity)
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
@@ -393,7 +401,6 @@ class Enumerable<T>: Stream<T> {
 	/*
 	@final func takeWhile(pred: T -> Bool) -> Enumerable<T>
 	@final func takeLast(count: Int) -> Enumerable<T>
-	@final func skipWhile(pred: T -> Bool) -> Enumerable<T>
 	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 	@final func collect() -> Enumerable<SequenceOf<T>>
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>

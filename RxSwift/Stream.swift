@@ -78,6 +78,16 @@ class Stream<T> {
 		}
 	}
 
+	func skipAsNilWhile(pred: T -> Bool) -> Stream<T?> {
+		return mapAccumulate(true) { (skipping, value) in
+			if !skipping || !pred(value) {
+				return (false, value)
+			} else {
+				return (true, nil)
+			}
+		}
+	}
+
 	/*
 	func zipWith<U>(stream: Stream<U>) -> Stream<(T, U)>
 	func mergeWith(stream: Stream<T>) -> Stream<T>
