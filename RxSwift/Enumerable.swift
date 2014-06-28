@@ -440,8 +440,16 @@ class Enumerable<T>: Stream<T> {
 			.takeLast(1)
 	}
 
+	@final func collect() -> Enumerable<SequenceOf<T>> {
+		return self
+			.aggregate([]) { (var values, current) in
+				values.append(current)
+				return values
+			}
+			.map { SequenceOf($0) }
+	}
+
 	/*
-	@final func collect() -> Enumerable<SequenceOf<T>>
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
 	*/
 }
