@@ -144,6 +144,10 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func map<U>(f: T -> U) -> Observable<U> {
+		return super.map(f) as Observable<U>
+	}
+
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
 		let enumerable = EnumerableBuffer<T>(capacity: capacity)
 

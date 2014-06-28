@@ -34,9 +34,7 @@ class Stream<T> {
 		return Stream<U>()
 	}
 
-	// TODO: Burn the below
-
-	@final func map<U>(f: T -> U) -> Stream<U> {
+	func map<U>(f: T -> U) -> Stream<U> {
 		return mapAccumulate(nil) { (_, value) in
 			return (nil, f(value))
 		}

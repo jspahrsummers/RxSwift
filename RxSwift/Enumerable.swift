@@ -163,6 +163,10 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func map<U>(f: T -> U) -> Enumerable<U> {
+		return super.map(f) as Enumerable<U>
+	}
+
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
