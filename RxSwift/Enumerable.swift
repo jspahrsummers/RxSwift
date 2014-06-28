@@ -74,9 +74,11 @@ class Enumerable<T>: Stream<T> {
 	}
 
 	@final override func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Enumerable<U> {
-		return Enumerable<U> { send in
-			send(.Next(Box(initialValue)))
+		return Enumerable<U>.unit(initialValue).concat(_removeNil(evidence))
+	}
 
+	@final func _removeNil<U>(evidence: Stream<T> -> Stream<U?>) -> Enumerable<U> {
+		return Enumerable<U> { send in
 			return (evidence(self) as Enumerable<U?>).enumerate { event in
 				switch event {
 				case let .Next(maybeValue):
