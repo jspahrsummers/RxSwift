@@ -73,6 +73,27 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final override func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Enumerable<U> {
+		return Enumerable<U> { send in
+			send(.Next(Box(initialValue)))
+
+			return (evidence(self) as Enumerable<U?>).enumerate { event in
+				switch event {
+				case let .Next(maybeValue):
+					if let value = maybeValue.value {
+						send(.Next(Box(value)))
+					}
+
+				case let .Error(error):
+					send(.Error(error))
+
+				case let .Completed:
+					send(.Completed)
+				}
+			}
+		}
+	}
+
 	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let disposable = CompositeDisposable()

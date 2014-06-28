@@ -109,6 +109,16 @@ class Observable<T>: Stream<T> {
 		}
 	}
 
+	@final override func removeNil<U>(evidence: Stream<T> -> Stream<U?>, initialValue: U) -> Observable<U> {
+		return Observable<U>(initialValue: initialValue) { send in
+			return (evidence(self) as Observable<U?>).observe { maybeValue in
+				if let value = maybeValue {
+					send(value)
+				}
+			}
+		}
+	}
+
 	@final override func merge<U>(evidence: Stream<T> -> Stream<Stream<U>>) -> Observable<U> {
 		return Observable<U> { send in
 			let disposable = CompositeDisposable()
