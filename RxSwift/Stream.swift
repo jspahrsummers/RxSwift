@@ -38,8 +38,8 @@ class Stream<T> {
 	 */
 
 	func map<U>(f: T -> U) -> Stream<U> {
-		return mapAccumulate(nil) { (_, value) in
-			return (nil, f(value))
+		return mapAccumulate(()) { (_, value) in
+			return ((), f(value))
 		}
 	}
 
