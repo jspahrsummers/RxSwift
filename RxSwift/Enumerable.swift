@@ -432,8 +432,15 @@ class Enumerable<T>: Stream<T> {
 		}
 	}
 
+	@final func aggregate<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
+		let scanned = scan(initialValue, f)
+
+		return Enumerable<U>.unit(initialValue)
+			.concat(scanned)
+			.takeLast(1)
+	}
+
 	/*
-	@final func aggregate<U>(initial: U, _ f: (U, T) -> U) -> Enumerable<U>
 	@final func collect() -> Enumerable<SequenceOf<T>>
 	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
 	*/
