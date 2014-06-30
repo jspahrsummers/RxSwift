@@ -10,13 +10,22 @@ import Foundation
 
 /// A pull-driven stream that executes work when an enumerator is attached.
 class Enumerable<T> {
+	/// Something capable of receiving the events sent by an Enumerable.
+	///
+	/// After receiving `Error` or `Completed` events, Enumerators should ignore
+	/// all further events.
 	typealias Enumerator = Event<T> -> ()
 
 	@final let _enumerate: Enumerator -> Disposable?
+
+	/// Initializes an Enumerable that will run the given action whenever an
+	/// Enumerator is attached, and optionally return a disposable that can be
+	/// used to cancel the work.
 	init(enumerate: Enumerator -> Disposable?) {
 		_enumerate = enumerate
 	}
 
+	/// Creates an Enumerable that will immediately complete.
 	@final class func empty() -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Completed)
@@ -24,6 +33,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Creates an Enumerable that will immediately yield a single value then
+	/// complete.
 	@final class func single(value: T) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Next(Box(value)))
@@ -32,6 +43,7 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Creates an Enumerable that will immediately generate an error.
 	@final class func error(error: NSError) -> Enumerable<T> {
 		return Enumerable { send in
 			send(.Error(error))
@@ -39,14 +51,27 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Creates an Enumerable that will never send any events.
 	@final class func never() -> Enumerable<T> {
 		return Enumerable { _ in nil }
 	}
 
+	/// Starts a new enumeration pass, performing any side effects embedded
+	/// within the Enumerable.
+	///
+	/// Optionally returns a Disposable which will cancel the work associated
+	/// with the enumeration, and prevent any further events from being sent.
 	@final func enumerate(enumerator: Enumerator) -> Disposable? {
 		return _enumerate(enumerator)
 	}
 
+	/// Maps over the elements of the Enumerable, accumulating a state along the
+	/// way.
+	///
+	/// This is meant as a primitive operator from which more complex operators
+	/// can be built.
+	///
+	/// Returns an Enumerable of the mapped values.
 	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let state = Atomic(initialState)
@@ -73,6 +98,13 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Merges an Enumerable of Enumerables into a single stream.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver is
+	///            a stream-of-streams. Simply pass in the `identity` function.
+	///
+	/// Returns an Enumerable that will forward events from the original streams
+	/// as they arrive.
 	@final func merge<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let disposable = CompositeDisposable()
@@ -118,6 +150,14 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Switches on an Enumerable of Enumerables, forwarding events from the
+	/// latest inner stream.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver is
+	///            a stream-of-streams. Simply pass in the `identity` function.
+	///
+	/// Returns an Enumerable that will forward events only from the latest
+	/// Enumerable sent upon the receiver.
 	@final func switchToLatest<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			let selfCompleted = Atomic(false)
@@ -163,12 +203,15 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Maps each value in the stream to a new value.
 	@final func map<U>(f: T -> U) -> Enumerable<U> {
 		return mapAccumulate(()) { (_, value) in
 			return ((), f(value))
 		}
 	}
 
+	/// Combines all the values in the stream, forwarding the result of each
+	/// intermediate combination step.
 	@final func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
 		return mapAccumulate(initialValue) { (previous, current) in
 			let mapped = f(previous, current)
@@ -176,6 +219,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Returns a stream that will yield the first `count` values from the
+	/// receiver.
 	@final func take(count: Int) -> Enumerable<T> {
 		if count == 0 {
 			return .empty()
@@ -187,6 +232,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Returns a stream that will yield values from the receiver while `pred`
+	/// remains `true`.
 	@final func takeWhile(pred: T -> Bool) -> Enumerable<T> {
 		return self
 			.mapAccumulate(true) { (taking, value) in
@@ -199,12 +246,16 @@ class Enumerable<T> {
 			.merge(identity)
 	}
 
+	/// Combines each value in the stream with its preceding value, starting
+	/// with `initialValue`.
 	@final func combinePrevious(initialValue: T) -> Enumerable<(T, T)> {
 		return mapAccumulate(initialValue) { (previous, current) in
 			return (current, (previous, current))
 		}
 	}
 
+	/// Returns a stream that will skip the first `count` values from the
+	/// receiver, then forward everything afterward.
 	@final func skip(count: Int) -> Enumerable<T> {
 		return self
 			.mapAccumulate(0) { (n, value) in
@@ -217,6 +268,8 @@ class Enumerable<T> {
 			.merge(identity)
 	}
 
+	/// Returns a stream that will skip values from the receiver while `pred`
+	/// remains `true`, then forward everything afterward.
 	@final func skipWhile(pred: T -> Bool) -> Enumerable<T> {
 		return self
 			.mapAccumulate(true) { (skipping, value) in
@@ -229,6 +282,8 @@ class Enumerable<T> {
 			.merge(identity)
 	}
 
+	/// Starts an enumeration pass, then blocks indefinitely, waiting for
+	/// a single event to be generated.
 	@final func first() -> Event<T> {
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Enumerable.first"
@@ -250,10 +305,21 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Starts an enumeration pass, and blocks indefinitely waiting for it to
+	/// complete.
+	///
+	/// Returns an Event which indicates whether enumeration succeeded or failed
+	/// with an error.
 	@final func waitUntilCompleted() -> Event<()> {
 		return ignoreValues().first()
 	}
 
+	/// Starts an enumeration pass, setting the current value of `property` to
+	/// each value yielded by the receiver.
+	///
+	/// The stream must not generate an `Error` event when bound to a property.
+	///
+	/// Optionally returns a Disposable which can be used to cancel the binding.
 	@final func bindToProperty(property: ObservableProperty<T>) -> Disposable? {
 		return self.enumerate { event in
 			switch event {
@@ -269,6 +335,7 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Preserves only the values of the stream that pass the given predicate.
 	@final func filter(pred: T -> Bool) -> Enumerable<T> {
 		return self
 			.map { value -> Enumerable<T> in
@@ -281,6 +348,12 @@ class Enumerable<T> {
 			.merge(identity)
 	}
 
+	/// Skips all consecutive, repeating values in the stream, forwarding only
+	/// the first occurrence.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver contains
+	///            values which are `Equatable`. Simply pass in the `identity`
+	///            function.
 	@final func skipRepeats<U: Equatable>(evidence: Enumerable<T> -> Enumerable<U>) -> Enumerable<U> {
 		return evidence(self)
 			.mapAccumulate(nil) { (maybePrevious: U?, current: U) -> (U??, Enumerable<U>) in
@@ -295,6 +368,8 @@ class Enumerable<T> {
 			.merge(identity)
 	}
 
+	/// Brings the stream events into the monad, allowing them to be manipulated
+	/// just like any other value.
 	@final func materialize() -> Enumerable<Event<T>> {
 		return Enumerable<Event<T>> { send in
 			return self.enumerate { event in
@@ -307,6 +382,11 @@ class Enumerable<T> {
 		}
 	}
 
+	/// The inverse of `materialize`, this will translate a stream of `Event`
+	/// _values_ into a stream of those events themselves.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver contains
+	///            a stream of `Event`s. Simply pass in the `identity` function.
 	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U> {
 		return Enumerable<U> { send in
 			return evidence(self).enumerate { event in
@@ -324,6 +404,7 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Creates and attaches to a new Enumerable when an error occurs.
 	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { send in
 			let serialDisposable = SerialDisposable()
@@ -343,6 +424,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Discards all values in the stream, preserving only `Error` and
+	/// `Completed` events.
 	@final func ignoreValues() -> Enumerable<()> {
 		return Enumerable<()> { send in
 			return self.enumerate { event in
@@ -360,6 +443,7 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Performs the given action whenever the Enumerable yields an Event.
 	@final func doEvent(action: Event<T> -> ()) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
@@ -369,6 +453,9 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Performs the given action whenever an enumeration pass is disposed of
+	/// (whether it completed successfully, terminated from an error, or was
+	/// manually disposed).
 	@final func doDisposed(action: () -> ()) -> Enumerable<T> {
 		return Enumerable { send in
 			let disposable = CompositeDisposable()
@@ -378,6 +465,13 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Begins enumerating the receiver on the given Scheduler.
+	///
+	/// This implies that any side effects embedded in the receiver will be
+	/// performed on the given Scheduler as well.
+	///
+	/// Values may still be sent upon other schedulers—this merely affects how
+	/// the `enumerate` method is invoked.
 	@final func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
@@ -387,6 +481,7 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Concatenates `stream` after the receiver.
 	@final func concat(stream: Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { send in
 			let serialDisposable = SerialDisposable()
@@ -405,6 +500,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Waits for the receiver to complete successfully, then forwards only the
+	/// last `count` values.
 	@final func takeLast(count: Int) -> Enumerable<T> {
 		return Enumerable { send in
 			let values: Atomic<T[]> = Atomic([])
@@ -435,6 +532,10 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Combines all of the values in the stream.
+	///
+	/// Returns an Enumerable which will send the single, aggregated value when
+	/// the receiver completes.
 	@final func aggregate<U>(initialValue: U, _ f: (U, T) -> U) -> Enumerable<U> {
 		let scanned = scan(initialValue, f)
 
@@ -443,6 +544,8 @@ class Enumerable<T> {
 			.takeLast(1)
 	}
 
+	/// Waits for the receiver to complete successfully, then forwards
+	/// a Sequence of all the values that were enumerated.
 	@final func collect() -> Enumerable<SequenceOf<T>> {
 		return self
 			.aggregate([]) { (var values, current) in
@@ -452,6 +555,10 @@ class Enumerable<T> {
 			.map { SequenceOf($0) }
 	}
 
+	/// Delays `Next` and `Completed` events by the given interval, forwarding
+	/// them on the given scheduler.
+	///
+	/// `Error` events are always scheduled immediately.
 	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
@@ -470,6 +577,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Yields all events on the given scheduler, instead of whichever
+	/// scheduler they originally arrived upon.
 	@final func deliverOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			return self.enumerate { event in
@@ -479,6 +588,8 @@ class Enumerable<T> {
 		}
 	}
 
+	/// Yields `error` after the given interval if the receiver has not yet
+	/// completed by that point.
 	@final func timeoutWithError(error: NSError, afterInterval interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { send in
 			let disposable = CompositeDisposable()
