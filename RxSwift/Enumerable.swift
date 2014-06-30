@@ -457,10 +457,14 @@ class Enumerable<T> {
 			return self.enumerate { event in
 				switch event {
 				case let .Error:
-					scheduler.schedule { send(event) }
+					scheduler.schedule {
+						send(event)
+					}
 
 				default:
-					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) { send(event) }
+					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
+						send(event)
+					}
 				}
 			}
 		}
@@ -475,7 +479,20 @@ class Enumerable<T> {
 		}
 	}
 
-	/*
-	@final func timeout(interval: NSTimeInterval, onScheduler: Scheduler) -> Enumerable<T>
-	*/
+	@final func timeoutWithError(error: NSError, afterInterval interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
+		return Enumerable { send in
+			let disposable = CompositeDisposable()
+
+			let schedulerDisposable = scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
+				send(.Error(error))
+			}
+
+			disposable.addDisposable(schedulerDisposable)
+
+			let selfDisposable = self.enumerate(send)
+			disposable.addDisposable(selfDisposable)
+
+			return disposable
+		}
+	}
 }
