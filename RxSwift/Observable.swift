@@ -295,6 +295,9 @@ class Observable<T> {
 
 		let bufferDisposable = ActionDisposable {
 			observationDisposable.dispose()
+
+			// FIXME: This violates the buffer size, since it will now only
+			// contain N - 1 values.
 			enumerable.send(.Completed)
 		}
 

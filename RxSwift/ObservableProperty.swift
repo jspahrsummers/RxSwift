@@ -12,6 +12,9 @@ import Foundation
 @final class ObservableProperty<T>: Observable<T> {
 	var _multicastObserver: Observer = { _ in () }
 
+	/// The current value of the property.
+	///
+	/// Setting this will notify all observers of the change.
 	override var current: T {
 		get {
 			return super.current
@@ -22,6 +25,7 @@ import Foundation
 		}
 	}
 
+	/// Initializes the property with the given default value.
 	init(_ value: T) {
 		super.init(generator: { send in
 			send(value)
@@ -31,6 +35,7 @@ import Foundation
 		})
 	}
 
+	/// Treats the property as its current value in expressions.
 	@conversion func __conversion() -> T {
 		return current
 	}

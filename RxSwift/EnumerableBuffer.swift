@@ -17,6 +17,10 @@ import Foundation
 	var _enumerators: Box<Enumerator>[] = []
 	var _eventBuffer: Event<T>[] = []
 
+	/// Creates a buffer for events up to the given maximum capacity.
+	///
+	/// If more than `capacity` values are received, the earliest values will be
+	/// dropped and won't be enumerated over in the future.
 	init(capacity: Int? = nil) {
 		assert(capacity == nil || capacity! > 0)
 		_capacity = capacity
@@ -40,6 +44,9 @@ import Foundation
 		})
 	}
 
+	/// Stores the given event in the buffer, evicting the earliest event if the
+	/// buffer would be over capacity, then forwards it to all waiting
+	/// enumerators.
 	func send(event: Event<T>) {
 		dispatch_barrier_sync(_queue) {
 			self._eventBuffer.append(event)
