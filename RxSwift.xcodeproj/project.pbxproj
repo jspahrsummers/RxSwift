@@ -7,7 +7,6 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D02164F41947AEA900D34273 /* PromiseSpec.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F31947AEA900D34273 /* PromiseSpec.swift */; };
 		D02164F61947B3E900D34273 /* SpinLock.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F51947B3E900D34273 /* SpinLock.swift */; };
 		D02164F81947BC4500D34273 /* Atomic.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164F71947BC4500D34273 /* Atomic.swift */; };
 		D02164FC1947C91C00D34273 /* ArrayExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D02164FB1947C91C00D34273 /* ArrayExtensions.swift */; };
@@ -99,7 +98,6 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
-		D02164F31947AEA900D34273 /* PromiseSpec.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PromiseSpec.swift; sourceTree = "<group>"; };
 		D02164F51947B3E900D34273 /* SpinLock.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SpinLock.swift; sourceTree = "<group>"; };
 		D02164F71947BC4500D34273 /* Atomic.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Atomic.swift; sourceTree = "<group>"; };
 		D02164FB1947C91C00D34273 /* ArrayExtensions.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ArrayExtensions.swift; sourceTree = "<group>"; };
@@ -213,7 +211,6 @@
 		D0CBB9EE193D1D1500C9CAF7 /* RxSwiftTests */ = {
 			isa = PBXGroup;
 			children = (
-				D02164F31947AEA900D34273 /* PromiseSpec.swift */,
 				D0CBB9EF193D1D1500C9CAF7 /* Supporting Files */,
 			);
 			path = RxSwiftTests;
@@ -492,7 +489,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				D02164F41947AEA900D34273 /* PromiseSpec.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
