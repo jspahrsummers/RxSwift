@@ -22,6 +22,7 @@
 		D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */; };
 		D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */; };
 		D0E03C8819613AB800955AC7 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E03C8719613AB800955AC7 /* Promise.swift */; };
+		D0E03C8A19614D7F00955AC7 /* Result.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E03C8919614D7F00955AC7 /* Result.swift */; };
 		D0F8CF1E1948F33600170790 /* Box.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8CF1D1948F33600170790 /* Box.swift */; };
 /* End PBXBuildFile section */
 
@@ -117,6 +118,7 @@
 		D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
 		D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Disposable.swift; sourceTree = "<group>"; };
 		D0E03C8719613AB800955AC7 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
+		D0E03C8919614D7F00955AC7 /* Result.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Result.swift; sourceTree = "<group>"; };
 		D0F8CF1D1948F33600170790 /* Box.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Box.swift; sourceTree = "<group>"; };
 		D16C8ED4195F9761000591CE /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick/Quick.xcodeproj; sourceTree = "<group>"; };
 		D16C8EE5195F976D000591CE /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/Quick/Nimble/Nimble.xcodeproj; sourceTree = "<group>"; };
@@ -260,6 +262,7 @@
 			children = (
 				D0F8CF1D1948F33600170790 /* Box.swift */,
 				D0B4C716195D2528000142DE /* Identity.swift */,
+				D0E03C8919614D7F00955AC7 /* Result.swift */,
 			);
 			name = Utilities;
 			sourceTree = "<group>";
@@ -478,6 +481,7 @@
 				D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */,
 				D0A6EA6A19481E3400649636 /* NSLockingExtensions.swift in Sources */,
 				D0BEB84E195BEB8000A985F7 /* Observable.swift in Sources */,
+				D0E03C8A19614D7F00955AC7 /* Result.swift in Sources */,
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0B4C717195D2528000142DE /* Identity.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
