@@ -21,6 +21,7 @@
 		D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FD193D236A00C9CAF7 /* Event.swift */; };
 		D0CBBA00193D2C1900C9CAF7 /* Scheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */; };
 		D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */; };
+		D0E03C8819613AB800955AC7 /* Promise.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0E03C8719613AB800955AC7 /* Promise.swift */; };
 		D0F8CF1E1948F33600170790 /* Box.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0F8CF1D1948F33600170790 /* Box.swift */; };
 /* End PBXBuildFile section */
 
@@ -115,6 +116,7 @@
 		D0CBB9FD193D236A00C9CAF7 /* Event.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Event.swift; sourceTree = "<group>"; };
 		D0CBB9FF193D2C1900C9CAF7 /* Scheduler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Scheduler.swift; sourceTree = "<group>"; };
 		D0CBBA01193D2C4300C9CAF7 /* Disposable.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Disposable.swift; sourceTree = "<group>"; };
+		D0E03C8719613AB800955AC7 /* Promise.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Promise.swift; sourceTree = "<group>"; };
 		D0F8CF1D1948F33600170790 /* Box.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Box.swift; sourceTree = "<group>"; };
 		D16C8ED4195F9761000591CE /* Quick.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Quick.xcodeproj; path = External/Quick/Quick/Quick.xcodeproj; sourceTree = "<group>"; };
 		D16C8EE5195F976D000591CE /* Nimble.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; name = Nimble.xcodeproj; path = External/Quick/Nimble/Nimble.xcodeproj; sourceTree = "<group>"; };
@@ -163,6 +165,7 @@
 			children = (
 				D0BEB84D195BEB8000A985F7 /* Observable.swift */,
 				D0B4C71C195D3C84000142DE /* ObservableProperty.swift */,
+				D0E03C8719613AB800955AC7 /* Promise.swift */,
 			);
 			name = Observables;
 			sourceTree = "<group>";
@@ -478,6 +481,7 @@
 				D0F8CF1E1948F33600170790 /* Box.swift in Sources */,
 				D0B4C717195D2528000142DE /* Identity.swift in Sources */,
 				D0CBBA02193D2C4300C9CAF7 /* Disposable.swift in Sources */,
+				D0E03C8819613AB800955AC7 /* Promise.swift in Sources */,
 				D0CBB9FE193D236A00C9CAF7 /* Event.swift in Sources */,
 				D02164F81947BC4500D34273 /* Atomic.swift in Sources */,
 				D0BEB850195BECE300A985F7 /* Enumerable.swift in Sources */,
