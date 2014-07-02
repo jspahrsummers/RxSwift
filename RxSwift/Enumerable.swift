@@ -16,29 +16,34 @@ func _dummyCompleted() {}
 class Enumerator<T>: Sink {
 	typealias Element = Event<T>
 
-	let _put: Atomic<(Event<T> -> ())?>
+	let _sink: Atomic<SinkOf<Element>?>
 
 	/// A list of Disposables to dispose of when the enumerator receives
 	/// a terminating event, or if enumeration is canceled.
 	let disposable = CompositeDisposable()
 
-	/// Initializes an Enumerator that will perform the given action whenever an
-	/// event is received.
-	init(put: Event<T> -> ()) {
-		_put = Atomic(put)
+	/// Initializes an Enumerator that will forward events to the given sink.
+	init<S: Sink where S.Element == Event<T>>(_ sink: S) {
+		_sink = Atomic(SinkOf(sink))
 
 		// This is redundant with the behavior of put() in case of
 		// a terminating event, but ensures that we get rid of the closure
 		// upon cancellation as well.
 		disposable.addDisposable {
-			self._put.value = nil
+			self._sink.value = nil
 		}
+	}
+
+	/// Initializes an Enumerator that will perform the given action whenever an
+	/// event is received.
+	convenience init(put: Event<T> -> ()) {
+		self.init(SinkOf(put))
 	}
 
 	/// Initializes an Enumerator with zero or more different callbacks, based
 	/// on the type of Event received.
 	convenience init(next: T -> () = _dummyNext, error: NSError -> () = _dummyError, completed: () -> () = _dummyCompleted) {
-		self.init(put: { event in
+		self.init(SinkOf<Element> { event in
 			switch event {
 			case let .Next(value):
 				next(value)
@@ -53,17 +58,15 @@ class Enumerator<T>: Sink {
 	}
 
 	func put(event: Event<T>) {
-		let oldPut = _put.modify { p in
+		let oldSink = _sink.modify { s in
 			if event.isTerminating {
 				return nil
 			} else {
-				return p
+				return s
 			}
 		}
-
-		if let p = oldPut {
-			p(event)
-		}
+		
+		oldSink?.put(event)
 
 		if event.isTerminating {
 			disposable.dispose()
