@@ -9,7 +9,9 @@
 import Foundation
 
 /// Represents a mutable property of type T along with the changes to its value.
-@final class ObservableProperty<T>: Observable<T> {
+@final class ObservableProperty<T>: Observable<T>, Sink {
+	typealias Element = T
+
 	var _sink = SinkOf<T> { _ in () }
 
 	/// The current value of the property.
@@ -38,5 +40,9 @@ import Foundation
 	/// Treats the property as its current value in expressions.
 	@conversion func __conversion() -> T {
 		return current
+	}
+
+	func put(value: T) {
+		current = value
 	}
 }
