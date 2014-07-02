@@ -10,7 +10,7 @@ import Foundation
 
 /// Represents a mutable property of type T along with the changes to its value.
 @final class ObservableProperty<T>: Observable<T> {
-	var _multicastObserver: Observer = { _ in () }
+	var _sink = SinkOf<T> { _ in () }
 
 	/// The current value of the property.
 	///
@@ -21,15 +21,15 @@ import Foundation
 		}
 
 		set(newValue) {
-			_multicastObserver(newValue)
+			_sink.put(newValue)
 		}
 	}
 
 	/// Initializes the property with the given default value.
 	init(_ value: T) {
-		super.init(generator: { send in
-			send(value)
-			self._multicastObserver = send
+		super.init(generator: { sink in
+			sink.put(value)
+			self._sink = sink
 
 			return nil
 		})

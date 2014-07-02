@@ -18,7 +18,7 @@ enum _PromiseState<T> {
 	let _scheduler: Scheduler
 	let _state: Atomic<_PromiseState<T>>
 
-	var _multicastObserver: Observer = { _ in () }
+	var _sink = SinkOf<T?> { _ in () }
 
 	/// Initializes a Promise that will run the given action upon the given
 	/// scheduler.
@@ -26,9 +26,9 @@ enum _PromiseState<T> {
 		_scheduler = scheduler
 		_state = Atomic(.Suspended(action))
 
-		super.init(generator: { send in
-			send(nil)
-			self._multicastObserver = send
+		super.init(generator: { sink in
+			sink.put(nil)
+			self._sink = sink
 
 			return nil
 		})
@@ -46,7 +46,7 @@ enum _PromiseState<T> {
 		case let .Suspended(action):
 			_scheduler.schedule {
 				let result = action()
-				self._multicastObserver(result)
+				self._sink.put(result)
 			}
 
 		default:
