@@ -39,7 +39,7 @@ enum _PromiseState<T> {
 	}
 
 	/// Starts the promise, if it hasn't started already.
-	func start() {
+	func start() -> Observable<T?> {
 		let oldState = _state.modify { _ in .Started }
 
 		switch oldState {
@@ -52,17 +52,17 @@ enum _PromiseState<T> {
 		default:
 			break
 		}
+
+		return self
 	}
 
 	/// Starts the promise (if necessary), then blocks indefinitely on the
 	/// result.
 	func result() -> T {
-		self.start()
-
 		let cond = NSCondition()
 		cond.name = "com.github.ReactiveCocoa.Promise.result"
 
-		observe { _ in
+		start().observe { _ in
 			withLock(cond) {
 				cond.signal()
 			}
