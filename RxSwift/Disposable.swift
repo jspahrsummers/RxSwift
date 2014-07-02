@@ -102,6 +102,11 @@ import Foundation
 			d!.dispose()
 		}
 	}
+
+	/// Adds an ActionDisposable to the list.
+	func addDisposable(action: () -> ()) {
+		addDisposable(ActionDisposable(action))
+	}
 	
 	/// Removes the given disposable from the list.
 	func removeDisposable(d: Disposable?) {
