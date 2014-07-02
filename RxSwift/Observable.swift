@@ -388,4 +388,32 @@ class Observable<T> {
 			}
 		}
 	}
+
+	/// Blocks indefinitely, waiting for the given predicate to be true.
+	///
+	/// Returns the first value that passes.
+	@final func firstPassingTest(pred: T -> Bool) -> T {
+		let cond = NSCondition()
+		cond.name = "com.github.ReactiveCocoa.Observable.firstPassingTest"
+
+		var matchingValue: T? = nil
+		observe { value in
+			if !pred(value) {
+				return
+			}
+
+			withLock(cond) { () -> () in
+				matchingValue = value
+				cond.signal()
+			}
+		}
+
+		return withLock(cond) {
+			while matchingValue == nil {
+				cond.wait()
+			}
+
+			return matchingValue!
+		}
+	}
 }
