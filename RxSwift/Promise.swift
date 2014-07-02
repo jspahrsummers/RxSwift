@@ -29,8 +29,6 @@ enum _PromiseState<T> {
 		super.init(generator: { sink in
 			sink.put(nil)
 			self._sink = sink
-
-			return nil
 		})
 	}
 

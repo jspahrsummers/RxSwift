@@ -32,8 +32,6 @@ import Foundation
 		super.init(generator: { sink in
 			sink.put(value)
 			self._sink = sink
-
-			return nil
 		})
 	}
 

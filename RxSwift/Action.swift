@@ -55,11 +55,13 @@ class Action<I, O>: Observable<Result<O>?> {
 		executing = .constant(false)
 		enabled = .constant(true)
 
-		super.init(generator: { send in
-			return self.executions
+		super.init(generator: { sink in
+			self.executions
 				.ignoreNil(identity, initialValue: .constant(nil))
 				.switchToLatest(identity)
-				.observe(send)
+				.observe(sink)
+
+			return ()
 		})
 
 		executing = executions

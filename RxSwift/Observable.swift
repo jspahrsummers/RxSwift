@@ -14,8 +14,6 @@ class Observable<T> {
 	@final var _current: Box<T>? = nil
 	@final var _observers: Box<SinkOf<T>>[] = []
 
-	@final var _disposable: Disposable? = nil
-
 	/// The current (most recent) value of the Observable.
 	var current: T {
 		get {
@@ -34,8 +32,8 @@ class Observable<T> {
 	///
 	/// `generator` _must_ yield at least one value synchronously, as
 	/// Observables can never have a null current value.
-	init(generator: SinkOf<T> -> Disposable?) {
-		_disposable = generator(SinkOf { value in
+	init(generator: SinkOf<T> -> ()) {
+		generator(SinkOf { value in
 			dispatch_barrier_sync(self._queue) {
 				self._current = Box(value)
 
@@ -50,15 +48,11 @@ class Observable<T> {
 	
 	/// Initializes an Observable with the given default value, and an action to
 	/// perform to begin observing future changes.
-	convenience init(initialValue: T, generator: SinkOf<T> -> Disposable?) {
+	convenience init(initialValue: T, generator: SinkOf<T> -> ()) {
 		self.init(generator: { sink in
 			sink.put(initialValue)
 			return generator(sink)
 		})
-	}
-
-	deinit {
-		_disposable?.dispose()
 	}
 
 	/// Creates a repeating timer of the given interval, sending updates on the
@@ -67,15 +61,17 @@ class Observable<T> {
 		let startDate = NSDate()
 
 		return Observable<NSDate>(initialValue: startDate) { sink in
-			return scheduler.scheduleAfter(startDate.dateByAddingTimeInterval(interval), repeatingEvery: interval, withLeeway: leeway) {
+			scheduler.scheduleAfter(startDate.dateByAddingTimeInterval(interval), repeatingEvery: interval, withLeeway: leeway) {
 				sink.put(NSDate())
 			}
+			
+			return ()
 		}
 	}
 
 	/// Notifies `observer` about all changes to the receiver's value.
 	///
-	/// Returns a Disposable which can be disposed of, to stop notifying
+	/// Returns a Disposable which can be disposed of to stop notifying
 	/// `observer` of future changes.
 	@final func observe<S: Sink where S.Element == T>(observer: S) -> Disposable {
 		let box = Box(SinkOf<T>(observer))
@@ -102,7 +98,6 @@ class Observable<T> {
 	@final class func constant(value: T) -> Observable<T> {
 		return Observable { sink in
 			sink.put(value)
-			return nil
 		}
 	}
 
@@ -116,11 +111,13 @@ class Observable<T> {
 	///                result in a null value for the returned stream.
 	@final func ignoreNil<U>(evidence: Observable<T> -> Observable<U?>, initialValue: U) -> Observable<U> {
 		return Observable<U>(initialValue: initialValue) { sink in
-			return evidence(self).observe { maybeValue in
+			evidence(self).observe { maybeValue in
 				if let value = maybeValue {
 					sink.put(value)
 				}
 			}
+
+			return ()
 		}
 	}
 
@@ -134,19 +131,16 @@ class Observable<T> {
 	/// as they arrive, starting with earlier ones.
 	@final func merge<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
 		return Observable<U> { sink in
-			let disposable = CompositeDisposable()
+			let streams = Atomic<Observable<U>[]>([])
 
-			let selfDisposable = evidence(self).observe { stream in
-				let streamDisposable = stream.observe { value in
-					sink.put(value)
+			evidence(self).observe { stream in
+				streams.modify { (var arr) in
+					arr.append(stream)
+					return arr
 				}
 
-				// FIXME: Unbounded resource growth!
-				disposable.addDisposable(streamDisposable)
+				stream.observe(sink)
 			}
-
-			disposable.addDisposable(selfDisposable)
-			return disposable
 		}
 	}
 
@@ -160,25 +154,20 @@ class Observable<T> {
 	/// Observable sent upon the receiver.
 	@final func switchToLatest<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
 		return Observable<U> { sink in
-			let compositeDisposable = CompositeDisposable()
-
 			let latestDisposable = SerialDisposable()
-			compositeDisposable.addDisposable(latestDisposable)
 
-			let selfDisposable = evidence(self).observe { stream in
+			evidence(self).observe { stream in
 				latestDisposable.innerDisposable = nil
-				latestDisposable.innerDisposable = stream.observe { value in sink.put(value) }
+				latestDisposable.innerDisposable = stream.observe(sink)
 			}
-
-			compositeDisposable.addDisposable(selfDisposable)
-			return compositeDisposable
 		}
 	}
 
 	/// Maps each value in the stream to a new value.
 	@final func map<U>(f: T -> U) -> Observable<U> {
 		return Observable<U> { sink in
-			return self.observe { value in sink.put(f(value)) }
+			self.observe { value in sink.put(f(value)) }
+			return ()
 		}
 	}
 
@@ -188,12 +177,14 @@ class Observable<T> {
 		let previous = Atomic(initialValue)
 
 		return Observable<U> { sink in
-			return self.observe { value in
+			self.observe { value in
 				let newValue = f(previous.value, value)
 				sink.put(newValue)
 
 				previous.value = newValue
 			}
+
+			return ()
 		}
 	}
 
@@ -215,8 +206,6 @@ class Observable<T> {
 					selfDisposable.dispose()
 				}
 			}
-
-			return selfDisposable
 		}
 	}
 
@@ -234,8 +223,6 @@ class Observable<T> {
 					selfDisposable.dispose()
 				}
 			}
-
-			return selfDisposable
 		}
 	}
 
@@ -245,10 +232,12 @@ class Observable<T> {
 		let previous = Atomic(initialValue)
 
 		return Observable<(T, T)> { sink in
-			return self.observe { value in
+			self.observe { value in
 				let orig = previous.swap(value)
 				sink.put((orig, value))
 			}
+
+			return ()
 		}
 	}
 
@@ -269,7 +258,7 @@ class Observable<T> {
 		return Observable<T?>(initialValue: nil) { sink in
 			let skipping = Atomic(true)
 
-			return self.observe { value in
+			self.observe { value in
 				if skipping.value && pred(value) {
 					sink.put(nil)
 				} else {
@@ -277,6 +266,8 @@ class Observable<T> {
 					sink.put(value)
 				}
 			}
+
+			return ()
 		}
 	}
 
@@ -312,11 +303,13 @@ class Observable<T> {
 	/// receiver's current value).
 	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
 		return Observable(initialValue: initialValue) { sink in
-			return self.observe { value in
+			self.observe { value in
 				if pred(value) {
 					sink.put(value)
 				}
 			}
+
+			return ()
 		}
 	}
 
@@ -330,7 +323,7 @@ class Observable<T> {
 		return Observable<U> { sink in
 			let maybePrevious = Atomic<U?>(nil)
 
-			return evidence(self).observe { current in
+			evidence(self).observe { current in
 				if let previous = maybePrevious.swap(current) {
 					if current == previous {
 						return
@@ -339,6 +332,8 @@ class Observable<T> {
 
 				sink.put(current)
 			}
+
+			return ()
 		}
 	}
 
@@ -350,9 +345,8 @@ class Observable<T> {
 	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)> {
 		return Observable<(T, U)> { sink in
 			// FIXME: This implementation is probably racey.
-			let selfDisposable = self.observe { value in sink.put(value, stream.current) }
-			let otherDisposable = stream.observe { value in sink.put(self.current, value) }
-			return CompositeDisposable([selfDisposable, otherDisposable])
+			self.observe { value in sink.put(value, stream.current) }
+			stream.observe { value in sink.put(self.current, value) }
 		}
 	}
 
@@ -360,7 +354,8 @@ class Observable<T> {
 	/// a value.
 	@final func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
 		return Observable { sink in
-			return sampler.observe { _ in sink.put(self.current) }
+			sampler.observe { _ in sink.put(self.current) }
+			return ()
 		}
 	}
 
@@ -371,10 +366,12 @@ class Observable<T> {
 	/// receiver's values after injecting the specified delay.
 	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T?> {
 		return Observable<T?>(initialValue: nil) { sink in
-			return self.observe { value in
+			self.observe { value in
 				scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) { sink.put(value) }
 				return ()
 			}
+
+			return ()
 		}
 	}
 
@@ -385,10 +382,12 @@ class Observable<T> {
 	/// receiver's values after being scheduled.
 	@final func deliverOn(scheduler: Scheduler) -> Observable<T?> {
 		return Observable<T?>(initialValue: nil) { sink in
-			return self.observe { value in
+			self.observe { value in
 				scheduler.schedule { sink.put(value) }
 				return ()
 			}
+
+			return ()
 		}
 	}
 
