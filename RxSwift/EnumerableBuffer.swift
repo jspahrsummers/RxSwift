@@ -10,7 +10,9 @@ import Foundation
 
 /// A controllable Enumerable that functions as a combination push- and
 /// pull-driven stream.
-@final class EnumerableBuffer<T>: Enumerable<T> {
+@final class EnumerableBuffer<T>: Enumerable<T>, Sink {
+	typealias Element = Event<T>
+
 	let _capacity: Int?
 
 	let _queue = dispatch_queue_create("com.github.ReactiveCocoa.EnumerableBuffer", DISPATCH_QUEUE_SERIAL)
@@ -45,7 +47,7 @@ import Foundation
 	/// Stores the given event in the buffer, evicting the earliest event if the
 	/// buffer would be over capacity, then forwards it to all waiting
 	/// enumerators.
-	func send(event: Event<T>) {
+	func put(event: Event<T>) {
 		dispatch_barrier_sync(_queue) {
 			self._eventBuffer.append(event)
 			if let capacity = self._capacity {

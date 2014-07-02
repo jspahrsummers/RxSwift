@@ -290,10 +290,10 @@ class Observable<T> {
 	/// Returns an Enumerable over the buffered values, and a Disposable which
 	/// can be used to cancel all further buffering.
 	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
-		let enumerable = EnumerableBuffer<T>(capacity: capacity)
+		let buffer = EnumerableBuffer<T>(capacity: capacity)
 
 		let observationDisposable = self.observe { value in
-			enumerable.send(.Next(Box(value)))
+			buffer.put(.Next(Box(value)))
 		}
 
 		let bufferDisposable = ActionDisposable {
@@ -301,10 +301,10 @@ class Observable<T> {
 
 			// FIXME: This violates the buffer size, since it will now only
 			// contain N - 1 values.
-			enumerable.send(.Completed)
+			buffer.put(.Completed)
 		}
 
-		return (enumerable, bufferDisposable)
+		return (buffer, bufferDisposable)
 	}
 
 	/// Preserves only the values of the stream that pass the given predicate,
