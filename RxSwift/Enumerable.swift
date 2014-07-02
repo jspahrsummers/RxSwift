@@ -8,27 +8,69 @@
 
 import Foundation
 
+func _dummyNext(value: Any) {}
+func _dummyError(error: NSError) {}
+func _dummyCompleted() {}
+
+/// Receives events from an Enumerable.
+class Enumerator<T>: Sink {
+	typealias Element = Event<T>
+
+	let _put: Atomic<(Event<T> -> ())?>
+
+	/// Initializes an Enumerator that will perform the given action whenever an
+	/// event is received.
+	init(put: Event<T> -> ()) {
+		_put = Atomic(put)
+	}
+
+	/// Initializes an Enumerator with zero or more different callbacks, based
+	/// on the type of Event received.
+	convenience init(next: T -> () = _dummyNext, error: NSError -> () = _dummyError, completed: () -> () = _dummyCompleted) {
+		self.init(put: { event in
+			switch event {
+			case let .Next(value):
+				next(value)
+
+			case let .Error(err):
+				error(err)
+
+			case let .Completed:
+				completed()
+			}
+		})
+	}
+
+	func put(event: Event<T>) {
+		let oldPut = _put.modify { p in
+			if event.isTerminating {
+				return nil
+			} else {
+				return p
+			}
+		}
+
+		if let p = oldPut {
+			p(event)
+		}
+	}
+}
+
 /// A pull-driven stream that executes work when an enumerator is attached.
 class Enumerable<T> {
-	/// Something capable of receiving the events sent by an Enumerable.
-	///
-	/// After receiving `Error` or `Completed` events, Enumerators should ignore
-	/// all further events.
-	typealias Enumerator = Event<T> -> ()
-
-	@final let _enumerate: Enumerator -> Disposable?
+	@final let _enumerate: Enumerator<T> -> Disposable?
 
 	/// Initializes an Enumerable that will run the given action whenever an
 	/// Enumerator is attached, and optionally return a disposable that can be
 	/// used to cancel the work.
-	init(enumerate: Enumerator -> Disposable?) {
+	init(enumerate: Enumerator<T> -> Disposable?) {
 		_enumerate = enumerate
 	}
 
 	/// Creates an Enumerable that will immediately complete.
 	@final class func empty() -> Enumerable<T> {
-		return Enumerable { send in
-			send(.Completed)
+		return Enumerable { enumerator in
+			enumerator.put(.Completed)
 			return nil
 		}
 	}
@@ -36,17 +78,17 @@ class Enumerable<T> {
 	/// Creates an Enumerable that will immediately yield a single value then
 	/// complete.
 	@final class func single(value: T) -> Enumerable<T> {
-		return Enumerable { send in
-			send(.Next(Box(value)))
-			send(.Completed)
+		return Enumerable { enumerator in
+			enumerator.put(.Next(Box(value)))
+			enumerator.put(.Completed)
 			return nil
 		}
 	}
 
 	/// Creates an Enumerable that will immediately generate an error.
 	@final class func error(error: NSError) -> Enumerable<T> {
-		return Enumerable { send in
-			send(.Error(error))
+		return Enumerable { enumerator in
+			enumerator.put(.Error(error))
 			return nil
 		}
 	}
@@ -61,8 +103,20 @@ class Enumerable<T> {
 	///
 	/// Optionally returns a Disposable which will cancel the work associated
 	/// with the enumeration, and prevent any further events from being sent.
-	@final func enumerate(enumerator: Enumerator) -> Disposable? {
+	@final func enumerate(enumerator: Enumerator<T>) -> Disposable? {
 		return _enumerate(enumerator)
+	}
+
+	/// Convenience function to invoke enumerate() with an Enumerator that will
+	/// pass values to the given closure.
+	@final func enumerate(enumerator: Event<T> -> ()) -> Disposable? {
+		return enumerate(Enumerator(enumerator))
+	}
+
+	/// Convenience function to invoke enumerate() with an Enumerator that has
+	/// the given callbacks for each event type.
+	@final func enumerate(next: T -> (), error: NSError -> (), completed: () -> ()) -> Disposable? {
+		return enumerate(Enumerator(next: next, error: error, completed: completed))
 	}
 
 	/// Maps over the elements of the Enumerable, accumulating a state along the
@@ -73,26 +127,26 @@ class Enumerable<T> {
 	///
 	/// Returns an Enumerable of the mapped values.
 	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
-		return Enumerable<U> { send in
+		return Enumerable<U> { enumerator in
 			let state = Atomic(initialState)
 
 			return self.enumerate { event in
 				switch event {
 				case let .Next(value):
 					let (maybeState, newValue) = f(state, value)
-					send(.Next(Box(newValue)))
+					enumerator.put(.Next(Box(newValue)))
 
 					if let s = maybeState {
 						state.value = s
 					} else {
-						send(.Completed)
+						enumerator.put(.Completed)
 					}
 
 				case let .Error(error):
-					send(.Error(error))
+					enumerator.put(.Error(error))
 
 				case let .Completed:
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 		}
@@ -106,14 +160,14 @@ class Enumerable<T> {
 	/// Returns an Enumerable that will forward events from the original streams
 	/// as they arrive.
 	@final func merge<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
-		return Enumerable<U> { send in
+		return Enumerable<U> { enumerator in
 			let disposable = CompositeDisposable()
 			let inFlight = Atomic(1)
 
 			func decrementInFlight() {
 				let orig = inFlight.modify { $0 - 1 }
 				if orig == 1 {
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 
@@ -133,12 +187,12 @@ class Enumerable<T> {
 							decrementInFlight()
 
 						default:
-							send(event)
+							enumerator.put(event)
 						}
 					}
 
 				case let .Error(error):
-					send(.Error(error))
+					enumerator.put(.Error(error))
 
 				case let .Completed:
 					decrementInFlight()
@@ -159,13 +213,13 @@ class Enumerable<T> {
 	/// Returns an Enumerable that will forward events only from the latest
 	/// Enumerable sent upon the receiver.
 	@final func switchToLatest<U>(evidence: Enumerable<T> -> Enumerable<Enumerable<U>>) -> Enumerable<U> {
-		return Enumerable<U> { send in
+		return Enumerable<U> { enumerator in
 			let selfCompleted = Atomic(false)
 			let latestCompleted = Atomic(false)
 
 			func completeIfNecessary() {
 				if selfCompleted.value && latestCompleted.value {
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 
@@ -185,12 +239,12 @@ class Enumerable<T> {
 							completeIfNecessary()
 
 						default:
-							send(innerEvent)
+							enumerator.put(innerEvent)
 						}
 					}
 
 				case let .Error(error):
-					send(.Error(error))
+					enumerator.put(.Error(error))
 
 				case let .Completed:
 					selfCompleted.value = true
@@ -371,12 +425,12 @@ class Enumerable<T> {
 	/// Brings the stream events into the monad, allowing them to be manipulated
 	/// just like any other value.
 	@final func materialize() -> Enumerable<Event<T>> {
-		return Enumerable<Event<T>> { send in
+		return Enumerable<Event<T>> { enumerator in
 			return self.enumerate { event in
-				send(.Next(Box(event)))
+				enumerator.put(.Next(Box(event)))
 
 				if event.isTerminating {
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 		}
@@ -388,17 +442,17 @@ class Enumerable<T> {
 	/// evidence - Used to prove to the typechecker that the receiver contains
 	///            a stream of `Event`s. Simply pass in the `identity` function.
 	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U> {
-		return Enumerable<U> { send in
+		return Enumerable<U> { enumerator in
 			return evidence(self).enumerate { event in
 				switch event {
 				case let .Next(innerEvent):
-					send(innerEvent)
+					enumerator.put(innerEvent)
 
 				case let .Error(error):
-					send(.Error(error))
+					enumerator.put(.Error(error))
 
 				case let .Completed:
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 		}
@@ -406,17 +460,17 @@ class Enumerable<T> {
 
 	/// Creates and attaches to a new Enumerable when an error occurs.
 	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			let serialDisposable = SerialDisposable()
 
 			serialDisposable.innerDisposable = self.enumerate { event in
 				switch event {
 				case let .Error(error):
 					let newStream = f(error)
-					serialDisposable.innerDisposable = newStream.enumerate(send)
+					serialDisposable.innerDisposable = newStream.enumerate(enumerator)
 
 				default:
-					send(event)
+					enumerator.put(event)
 				}
 			}
 
@@ -427,17 +481,17 @@ class Enumerable<T> {
 	/// Discards all values in the stream, preserving only `Error` and
 	/// `Completed` events.
 	@final func ignoreValues() -> Enumerable<()> {
-		return Enumerable<()> { send in
+		return Enumerable<()> { enumerator in
 			return self.enumerate { event in
 				switch event {
 				case let .Next(value):
 					break
 
 				case let .Error(error):
-					send(.Error(error))
+					enumerator.put(.Error(error))
 
 				case let .Completed:
-					send(.Completed)
+					enumerator.put(.Completed)
 				}
 			}
 		}
@@ -445,10 +499,10 @@ class Enumerable<T> {
 
 	/// Performs the given action whenever the Enumerable yields an Event.
 	@final func doEvent(action: Event<T> -> ()) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			return self.enumerate { event in
 				action(event)
-				send(event)
+				enumerator.put(event)
 			}
 		}
 	}
@@ -457,10 +511,10 @@ class Enumerable<T> {
 	/// (whether it completed successfully, terminated from an error, or was
 	/// manually disposed).
 	@final func doDisposed(action: () -> ()) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			let disposable = CompositeDisposable()
 			disposable.addDisposable(ActionDisposable(action))
-			disposable.addDisposable(self.enumerate(send))
+			disposable.addDisposable(self.enumerate(enumerator))
 			return disposable
 		}
 	}
@@ -473,9 +527,9 @@ class Enumerable<T> {
 	/// Values may still be sent upon other schedulers—this merely affects how
 	/// the `enumerate` method is invoked.
 	@final func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			return self.enumerate { event in
-				scheduler.schedule { send(event) }
+				scheduler.schedule { enumerator.put(event) }
 				return ()
 			}
 		}
@@ -483,16 +537,16 @@ class Enumerable<T> {
 
 	/// Concatenates `stream` after the receiver.
 	@final func concat(stream: Enumerable<T>) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			let serialDisposable = SerialDisposable()
 
 			serialDisposable.innerDisposable = self.enumerate { event in
 				switch event {
 				case let .Completed:
-					serialDisposable.innerDisposable = stream.enumerate(send)
+					serialDisposable.innerDisposable = stream.enumerate(enumerator)
 
 				default:
-					send(event)
+					enumerator.put(event)
 				}
 			}
 
@@ -503,7 +557,7 @@ class Enumerable<T> {
 	/// Waits for the receiver to complete successfully, then forwards only the
 	/// last `count` values.
 	@final func takeLast(count: Int) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			let values: Atomic<T[]> = Atomic([])
 
 			return self.enumerate { event in
@@ -520,13 +574,13 @@ class Enumerable<T> {
 
 				case let .Completed:
 					for v in values.value {
-						send(.Next(Box(v)))
+						enumerator.put(.Next(Box(v)))
 					}
 
-					send(.Completed)
+					enumerator.put(.Completed)
 
 				default:
-					send(event)
+					enumerator.put(event)
 				}
 			}
 		}
@@ -560,17 +614,17 @@ class Enumerable<T> {
 	///
 	/// `Error` events are always scheduled immediately.
 	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			return self.enumerate { event in
 				switch event {
 				case let .Error:
 					scheduler.schedule {
-						send(event)
+						enumerator.put(event)
 					}
 
 				default:
 					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
-						send(event)
+						enumerator.put(event)
 					}
 				}
 			}
@@ -580,9 +634,9 @@ class Enumerable<T> {
 	/// Yields all events on the given scheduler, instead of whichever
 	/// scheduler they originally arrived upon.
 	@final func deliverOn(scheduler: Scheduler) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			return self.enumerate { event in
-				scheduler.schedule { send(event) }
+				scheduler.schedule { enumerator.put(event) }
 				return ()
 			}
 		}
@@ -591,16 +645,16 @@ class Enumerable<T> {
 	/// Yields `error` after the given interval if the receiver has not yet
 	/// completed by that point.
 	@final func timeoutWithError(error: NSError, afterInterval interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
-		return Enumerable { send in
+		return Enumerable { enumerator in
 			let disposable = CompositeDisposable()
 
 			let schedulerDisposable = scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
-				send(.Error(error))
+				enumerator.put(.Error(error))
 			}
 
 			disposable.addDisposable(schedulerDisposable)
 
-			let selfDisposable = self.enumerate(send)
+			let selfDisposable = self.enumerate(enumerator)
 			disposable.addDisposable(selfDisposable)
 
 			return disposable

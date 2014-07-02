@@ -14,7 +14,7 @@ import Foundation
 	let _capacity: Int?
 
 	let _queue = dispatch_queue_create("com.github.ReactiveCocoa.EnumerableBuffer", DISPATCH_QUEUE_SERIAL)
-	var _enumerators: Box<Enumerator>[] = []
+	var _enumerators: Enumerator<T>[] = []
 	var _eventBuffer: Event<T>[] = []
 
 	/// Creates a buffer for events up to the given maximum capacity.
@@ -25,20 +25,18 @@ import Foundation
 		assert(capacity == nil || capacity! > 0)
 		_capacity = capacity
 
-		super.init(enumerate: { send in
-			let box = Box(send)
-
+		super.init(enumerate: { enumerator in
 			dispatch_barrier_sync(self._queue) {
-				self._enumerators.append(box)
+				self._enumerators.append(enumerator)
 
 				for event in self._eventBuffer {
-					send(event)
+					enumerator.put(event)
 				}
 			}
 
 			return ActionDisposable {
 				dispatch_barrier_async(self._queue) {
-					self._enumerators = removeObjectIdenticalTo(box, fromArray: self._enumerators)
+					self._enumerators = removeObjectIdenticalTo(enumerator, fromArray: self._enumerators)
 				}
 			}
 		})
@@ -56,8 +54,8 @@ import Foundation
 				}
 			}
 
-			for send in self._enumerators {
-				send.value(event)
+			for enumerator in self._enumerators {
+				enumerator.put(event)
 			}
 		}
 	}
