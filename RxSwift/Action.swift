@@ -105,4 +105,36 @@ class Action<I, O>: Observable<Result<O>?> {
 
 		return results
 	}
+
+	/// Returns an action that will execute the receiver, followed by the given
+	/// action upon success.
+	func then<P>(action: Action<O, P>) -> Action<I, P> {
+		let bothEnabled = enabled
+			.combineLatestWith(action.enabled)
+			.map { (a, b) in a && b }
+
+		return Action<I, P>(enabledIf: bothEnabled) { input in
+			return Promise(onScheduler: QueueScheduler()) {
+				let firstResult = self
+					.execute(input)
+					.map { maybeResult -> Observable<Result<P>?> in
+						if let result = maybeResult {
+							switch result {
+							case let .Success(value):
+								return action.execute(value)
+
+							case let .Error(error):
+								return .constant(Result.Error(error))
+							}
+						}
+
+						return .constant(nil)
+					}
+					.switchToLatest(identity)
+					.firstPassingTest { $0 != nil }
+
+				return firstResult!
+			}
+		}
+	}
 }
