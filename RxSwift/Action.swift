@@ -90,17 +90,22 @@ class Action<I, O>: Observable<Result<O>?> {
 			}
 
 			let promise = self._execute(input)
-			self._executions.current = promise
-
-			promise
-				.start()
+			let execution: Observable<Result<O>?> = promise
 				.deliverOn(MainScheduler())
-				.observe { maybeResult in
-					if maybeResult != nil {
-						// Execution completed.
-						self._executions.current = nil
-					}
+				// Remove one layer of optional binding caused by the `deliverOn`.
+				.ignoreNil(identity, initialValue: nil)
+
+			self._executions.current = execution
+			execution.observe { maybeResult in
+				results.current = maybeResult
+
+				if maybeResult != nil {
+					// Execution completed.
+					self._executions.current = nil
 				}
+			}
+
+			promise.start()
 		}
 
 		return results
