@@ -34,7 +34,7 @@ import Foundation
 				}
 			}
 
-			return ActionDisposable {
+			enumerator.disposable.addDisposable {
 				dispatch_barrier_async(self._queue) {
 					self._enumerators = removeObjectIdenticalTo(enumerator, fromArray: self._enumerators)
 				}

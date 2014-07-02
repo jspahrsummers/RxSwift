@@ -18,10 +18,21 @@ class Enumerator<T>: Sink {
 
 	let _put: Atomic<(Event<T> -> ())?>
 
+	/// A list of Disposables to dispose of when the enumerator receives
+	/// a terminating event, or if enumeration is canceled.
+	let disposable = CompositeDisposable()
+
 	/// Initializes an Enumerator that will perform the given action whenever an
 	/// event is received.
 	init(put: Event<T> -> ()) {
 		_put = Atomic(put)
+
+		// This is redundant with the behavior of put() in case of
+		// a terminating event, but ensures that we get rid of the closure
+		// upon cancellation as well.
+		disposable.addDisposable {
+			self._put.value = nil
+		}
 	}
 
 	/// Initializes an Enumerator with zero or more different callbacks, based
@@ -53,17 +64,20 @@ class Enumerator<T>: Sink {
 		if let p = oldPut {
 			p(event)
 		}
+
+		if event.isTerminating {
+			disposable.dispose()
+		}
 	}
 }
 
 /// A pull-driven stream that executes work when an enumerator is attached.
 class Enumerable<T> {
-	@final let _enumerate: Enumerator<T> -> Disposable?
+	@final let _enumerate: Enumerator<T> -> ()
 
 	/// Initializes an Enumerable that will run the given action whenever an
-	/// Enumerator is attached, and optionally return a disposable that can be
-	/// used to cancel the work.
-	init(enumerate: Enumerator<T> -> Disposable?) {
+	/// Enumerator is attached.
+	init(enumerate: Enumerator<T> -> ()) {
 		_enumerate = enumerate
 	}
 
@@ -71,7 +85,6 @@ class Enumerable<T> {
 	@final class func empty() -> Enumerable<T> {
 		return Enumerable { enumerator in
 			enumerator.put(.Completed)
-			return nil
 		}
 	}
 
@@ -81,7 +94,6 @@ class Enumerable<T> {
 		return Enumerable { enumerator in
 			enumerator.put(.Next(Box(value)))
 			enumerator.put(.Completed)
-			return nil
 		}
 	}
 
@@ -89,13 +101,12 @@ class Enumerable<T> {
 	@final class func error(error: NSError) -> Enumerable<T> {
 		return Enumerable { enumerator in
 			enumerator.put(.Error(error))
-			return nil
 		}
 	}
 
 	/// Creates an Enumerable that will never send any events.
 	@final class func never() -> Enumerable<T> {
-		return Enumerable { _ in nil }
+		return Enumerable { _ in () }
 	}
 
 	/// Starts a new enumeration pass, performing any side effects embedded
@@ -103,19 +114,20 @@ class Enumerable<T> {
 	///
 	/// Optionally returns a Disposable which will cancel the work associated
 	/// with the enumeration, and prevent any further events from being sent.
-	@final func enumerate(enumerator: Enumerator<T>) -> Disposable? {
-		return _enumerate(enumerator)
+	@final func enumerate(enumerator: Enumerator<T>) -> Disposable {
+		_enumerate(enumerator)
+		return enumerator.disposable
 	}
 
 	/// Convenience function to invoke enumerate() with an Enumerator that will
 	/// pass values to the given closure.
-	@final func enumerate(enumerator: Event<T> -> ()) -> Disposable? {
+	@final func enumerate(enumerator: Event<T> -> ()) -> Disposable {
 		return enumerate(Enumerator(enumerator))
 	}
 
 	/// Convenience function to invoke enumerate() with an Enumerator that has
 	/// the given callbacks for each event type.
-	@final func enumerate(next: T -> (), error: NSError -> (), completed: () -> ()) -> Disposable? {
+	@final func enumerate(next: T -> (), error: NSError -> (), completed: () -> ()) -> Disposable {
 		return enumerate(Enumerator(next: next, error: error, completed: completed))
 	}
 
@@ -129,8 +141,7 @@ class Enumerable<T> {
 	@final func mapAccumulate<S, U>(initialState: S, _ f: (S, T) -> (S?, U)) -> Enumerable<U> {
 		return Enumerable<U> { enumerator in
 			let state = Atomic(initialState)
-
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				switch event {
 				case let .Next(value):
 					let (maybeState, newValue) = f(state, value)
@@ -149,6 +160,8 @@ class Enumerable<T> {
 					enumerator.put(.Completed)
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -199,8 +212,7 @@ class Enumerable<T> {
 				}
 			}
 
-			disposable.addDisposable(selfDisposable)
-			return disposable
+			enumerator.disposable.addDisposable(selfDisposable)
 		}
 	}
 
@@ -223,10 +235,8 @@ class Enumerable<T> {
 				}
 			}
 
-			let compositeDisposable = CompositeDisposable()
-
 			let latestDisposable = SerialDisposable()
-			compositeDisposable.addDisposable(latestDisposable)
+			enumerator.disposable.addDisposable(latestDisposable)
 
 			let selfDisposable = evidence(self).enumerate { event in
 				switch event {
@@ -252,8 +262,7 @@ class Enumerable<T> {
 				}
 			}
 
-			compositeDisposable.addDisposable(selfDisposable)
-			return compositeDisposable
+			enumerator.disposable.addDisposable(selfDisposable)
 		}
 	}
 
@@ -426,13 +435,15 @@ class Enumerable<T> {
 	/// just like any other value.
 	@final func materialize() -> Enumerable<Event<T>> {
 		return Enumerable<Event<T>> { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				enumerator.put(.Next(Box(event)))
 
 				if event.isTerminating {
 					enumerator.put(.Completed)
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -443,7 +454,7 @@ class Enumerable<T> {
 	///            a stream of `Event`s. Simply pass in the `identity` function.
 	@final func dematerialize<U>(evidence: Enumerable<T> -> Enumerable<Event<U>>) -> Enumerable<U> {
 		return Enumerable<U> { enumerator in
-			return evidence(self).enumerate { event in
+			let disposable = evidence(self).enumerate { event in
 				switch event {
 				case let .Next(innerEvent):
 					enumerator.put(innerEvent)
@@ -455,6 +466,8 @@ class Enumerable<T> {
 					enumerator.put(.Completed)
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -462,6 +475,7 @@ class Enumerable<T> {
 	@final func catch(f: NSError -> Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { enumerator in
 			let serialDisposable = SerialDisposable()
+			enumerator.disposable.addDisposable(serialDisposable)
 
 			serialDisposable.innerDisposable = self.enumerate { event in
 				switch event {
@@ -473,8 +487,6 @@ class Enumerable<T> {
 					enumerator.put(event)
 				}
 			}
-
-			return serialDisposable
 		}
 	}
 
@@ -482,7 +494,7 @@ class Enumerable<T> {
 	/// `Completed` events.
 	@final func ignoreValues() -> Enumerable<()> {
 		return Enumerable<()> { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				switch event {
 				case let .Next(value):
 					break
@@ -494,16 +506,20 @@ class Enumerable<T> {
 					enumerator.put(.Completed)
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
 	/// Performs the given action whenever the Enumerable yields an Event.
 	@final func doEvent(action: Event<T> -> ()) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				action(event)
 				enumerator.put(event)
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -512,10 +528,8 @@ class Enumerable<T> {
 	/// manually disposed).
 	@final func doDisposed(action: () -> ()) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			let disposable = CompositeDisposable()
-			disposable.addDisposable(ActionDisposable(action))
-			disposable.addDisposable(self.enumerate(enumerator))
-			return disposable
+			enumerator.disposable.addDisposable(ActionDisposable(action))
+			enumerator.disposable.addDisposable(self.enumerate(enumerator))
 		}
 	}
 
@@ -528,10 +542,12 @@ class Enumerable<T> {
 	/// the `enumerate` method is invoked.
 	@final func enumerateOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				scheduler.schedule { enumerator.put(event) }
 				return ()
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -539,6 +555,7 @@ class Enumerable<T> {
 	@final func concat(stream: Enumerable<T>) -> Enumerable<T> {
 		return Enumerable { enumerator in
 			let serialDisposable = SerialDisposable()
+			enumerator.disposable.addDisposable(serialDisposable)
 
 			serialDisposable.innerDisposable = self.enumerate { event in
 				switch event {
@@ -549,8 +566,6 @@ class Enumerable<T> {
 					enumerator.put(event)
 				}
 			}
-
-			return serialDisposable
 		}
 	}
 
@@ -559,8 +574,7 @@ class Enumerable<T> {
 	@final func takeLast(count: Int) -> Enumerable<T> {
 		return Enumerable { enumerator in
 			let values: Atomic<T[]> = Atomic([])
-
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				switch event {
 				case let .Next(value):
 					values.modify { (var arr) in
@@ -583,6 +597,8 @@ class Enumerable<T> {
 					enumerator.put(event)
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -615,7 +631,7 @@ class Enumerable<T> {
 	/// `Error` events are always scheduled immediately.
 	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				switch event {
 				case let .Error:
 					scheduler.schedule {
@@ -628,6 +644,8 @@ class Enumerable<T> {
 					}
 				}
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -635,10 +653,12 @@ class Enumerable<T> {
 	/// scheduler they originally arrived upon.
 	@final func deliverOn(scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			return self.enumerate { event in
+			let disposable = self.enumerate { event in
 				scheduler.schedule { enumerator.put(event) }
 				return ()
 			}
+			
+			enumerator.disposable.addDisposable(disposable)
 		}
 	}
 
@@ -646,18 +666,14 @@ class Enumerable<T> {
 	/// completed by that point.
 	@final func timeoutWithError(error: NSError, afterInterval interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Enumerable<T> {
 		return Enumerable { enumerator in
-			let disposable = CompositeDisposable()
-
 			let schedulerDisposable = scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
 				enumerator.put(.Error(error))
 			}
 
-			disposable.addDisposable(schedulerDisposable)
+			enumerator.disposable.addDisposable(schedulerDisposable)
 
 			let selfDisposable = self.enumerate(enumerator)
-			disposable.addDisposable(selfDisposable)
-
-			return disposable
+			enumerator.disposable.addDisposable(selfDisposable)
 		}
 	}
 }
