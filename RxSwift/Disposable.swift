@@ -10,8 +10,7 @@ import Foundation
 
 /// Represents an object that can be “disposed,” usually associated with freeing
 /// resources or canceling work.
-@class_protocol
-protocol Disposable {
+@class_protocol protocol Disposable {
 	/// Whether this disposable has been disposed already.
 	var disposed: Bool { get }
 
@@ -20,7 +19,7 @@ protocol Disposable {
 
 /// A disposable that only flips `disposed` upon disposal, and performs no other
 /// work.
-class SimpleDisposable: Disposable {
+@final class SimpleDisposable: Disposable {
 	var _disposed = Atomic(false)
 
 	var disposed: Bool {
@@ -35,7 +34,7 @@ class SimpleDisposable: Disposable {
 }
 
 /// A disposable that will run an action upon disposal.
-class ActionDisposable: Disposable {
+@final class ActionDisposable: Disposable {
 	var _action: Atomic<(() -> ())?>
 
 	var disposed: Bool {
@@ -56,7 +55,7 @@ class ActionDisposable: Disposable {
 }
 
 /// A disposable that will dispose of any number of other disposables.
-class CompositeDisposable: Disposable {
+@final class CompositeDisposable: Disposable {
 	var _disposables: Atomic<Disposable[]?>
 	
 	var disposed: Bool {
@@ -103,6 +102,11 @@ class CompositeDisposable: Disposable {
 			d!.dispose()
 		}
 	}
+
+	/// Adds an ActionDisposable to the list.
+	func addDisposable(action: () -> ()) {
+		addDisposable(ActionDisposable(action))
+	}
 	
 	/// Removes the given disposable from the list.
 	func removeDisposable(d: Disposable?) {
@@ -122,7 +126,7 @@ class CompositeDisposable: Disposable {
 
 /// A disposable that, upon deinitialization, will automatically dispose of
 /// another disposable.
-class ScopedDisposable: Disposable {
+@final class ScopedDisposable: Disposable {
 	/// The disposable which will be disposed when the ScopedDisposable
 	/// deinitializes.
 	let innerDisposable: Disposable
@@ -149,7 +153,7 @@ class ScopedDisposable: Disposable {
 }
 
 /// A disposable that will optionally dispose of another disposable.
-class SerialDisposable: Disposable {
+@final class SerialDisposable: Disposable {
 	struct _State {
 		var innerDisposable: Disposable? = nil
 		var disposed = false

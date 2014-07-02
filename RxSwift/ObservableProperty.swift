@@ -2,55 +2,45 @@
 //  ObservableProperty.swift
 //  RxSwift
 //
-//  Created by Justin Spahr-Summers on 2014-06-14.
+//  Created by Justin Spahr-Summers on 2014-06-26.
 //  Copyright (c) 2014 GitHub. All rights reserved.
 //
 
 import Foundation
 
 /// Represents a mutable property of type T along with the changes to its value.
-///
-/// New observers of this stream will receive the current `value`, all future
-/// values thereafter, and then a Completed event when the property is
-/// deinitialized.
-@final class ObservableProperty<T>: Observable<T> {
-	var _mutableClosure: () -> T
+@final class ObservableProperty<T>: Observable<T>, Sink {
+	typealias Element = T
 
-	/// The value of the property.
+	var _sink = SinkOf<T> { _ in () }
+
+	/// The current value of the property.
 	///
-	/// Setting this will notify all observers of the new value.
-	var value: T {
+	/// Setting this will notify all observers of the change.
+	override var current: T {
 		get {
-			return _mutableClosure()
+			return super.current
 		}
 
 		set(newValue) {
-			_mutableClosure = { newValue }
-			_sendAll(.Next(Box(newValue)))
+			_sink.put(newValue)
 		}
 	}
 
+	/// Initializes the property with the given default value.
 	init(_ value: T) {
-		_mutableClosure = { value }
-
-		super.init({ send in
-			send(.Next(Box(value)))
-			return nil
+		super.init(generator: { sink in
+			sink.put(value)
+			self._sink = sink
 		})
 	}
 
-	deinit {
-		_sendAll(.Completed)
+	/// Treats the property as its current value in expressions.
+	@conversion func __conversion() -> T {
+		return current
 	}
 
-	func _sendAll(event: Event<T>) {
-		for send in _observers {
-			send.value(event)
-		}
-	}
-
-	@conversion
-	func __conversion() -> T {
-		return value
+	func put(value: T) {
+		current = value
 	}
 }

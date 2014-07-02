@@ -2,424 +2,420 @@
 //  Observable.swift
 //  RxSwift
 //
-//  Created by Justin Spahr-Summers on 2014-06-02.
+//  Created by Justin Spahr-Summers on 2014-06-25.
 //  Copyright (c) 2014 GitHub. All rights reserved.
 //
 
 import Foundation
 
-// TODO: These live outside of the definition below because of an infinite loop
-// in the compiler. Move them back within Observable once that's fixed.
-struct _ZipState<T> {
-	var values: T[] = []
-	var completed = false
+/// A push-driven stream that sends the same values to all observers.
+class Observable<T> {
+	@final let _queue = dispatch_queue_create("com.github.ReactiveCocoa.Observable", DISPATCH_QUEUE_CONCURRENT)
+	@final var _current: Box<T>? = nil
+	@final var _observers: Box<SinkOf<T>>[] = []
 
-	init() {
+	/// The current (most recent) value of the Observable.
+	var current: T {
+		get {
+			var value: T? = nil
+
+			dispatch_sync(_queue) {
+				value = self._current
+			}
+
+			return value!
+		}
 	}
 
-	init(_ values: T[], _ completed: Bool) {
-		self.values = values
-		self.completed = completed
-	}
-}
-
-struct _CombineState<T> {
-	var latestValue: T? = nil
-	var completed = false
-
-	init() {
-	}
-
-	init(_ value: T?, _ completed: Bool) {
-		self.latestValue = value
-		self.completed = completed
-	}
-}
-
-/// A producer-driven (push-based) stream of values.
-class Observable<T>: Stream<T> {
-	/// The type of a consumer for the stream's events.
-	typealias Observer = Event<T> -> ()
-	
-	let _observe: Observer -> Disposable?
-	init(_ observe: Observer -> Disposable?) {
-		self._observe = observe
-	}
-	
-	let _observerQueue = dispatch_queue_create("com.github.RxSwift.Observable", DISPATCH_QUEUE_SERIAL)
-	var _observers: Box<Observer>[] = []
- 
-	/// Observes the stream for new events.
+	/// Initializes an Observable that will run the given action immediately, to
+	/// observe all changes.
 	///
-	/// Returns a disposable which can be used to cease observation.
-	func observe(observer: Observer) -> Disposable {
-		let box = Box(observer)
-	
-		dispatch_sync(_observerQueue, {
-			self._observers.append(box)
+	/// `generator` _must_ yield at least one value synchronously, as
+	/// Observables can never have a null current value.
+	init(generator: SinkOf<T> -> ()) {
+		generator(SinkOf { value in
+			dispatch_barrier_sync(self._queue) {
+				self._current = Box(value)
+
+				for sinkBox in self._observers {
+					sinkBox.value.put(value)
+				}
+			}
 		})
-		
-		self._observe(box.value)
-		
+
+		assert(_current != nil)
+	}
+	
+	/// Initializes an Observable with the given default value, and an action to
+	/// perform to begin observing future changes.
+	convenience init(initialValue: T, generator: SinkOf<T> -> ()) {
+		self.init(generator: { sink in
+			sink.put(initialValue)
+			return generator(sink)
+		})
+	}
+
+	/// Creates a repeating timer of the given interval, sending updates on the
+	/// given scheduler.
+	@final class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
+		let startDate = NSDate()
+
+		return Observable<NSDate>(initialValue: startDate) { sink in
+			scheduler.scheduleAfter(startDate.dateByAddingTimeInterval(interval), repeatingEvery: interval, withLeeway: leeway) {
+				sink.put(NSDate())
+			}
+			
+			return ()
+		}
+	}
+
+	/// Notifies `observer` about all changes to the receiver's value.
+	///
+	/// Returns a Disposable which can be disposed of to stop notifying
+	/// `observer` of future changes.
+	@final func observe<S: Sink where S.Element == T>(observer: S) -> Disposable {
+		let box = Box(SinkOf<T>(observer))
+
+		dispatch_barrier_sync(_queue) {
+			self._observers.append(box)
+			box.value.put(self._current!)
+		}
+
 		return ActionDisposable {
-			dispatch_sync(self._observerQueue, {
+			dispatch_barrier_async(self._queue) {
 				self._observers = removeObjectIdenticalTo(box, fromArray: self._observers)
-			})
+			}
 		}
 	}
 
-	/// Buffers all new events into a sequence which can be enumerated
-	/// on-demand.
-	///
-	/// Returns the buffered sequence, and a disposable which can be used to
-	/// stop buffering further events.
-	func replay() -> (AsyncSequence<T>, Disposable) {
-		let buf = AsyncBuffer<T>()
-		return (buf, self.observe(buf.send))
+	/// Convenience function to invoke observe() with a Sink that will pass
+	/// values to the given closure.
+	@final func observe(observer: T -> ()) -> Disposable {
+		return observe(SinkOf(observer))
 	}
 
-	/// Takes events from the receiver until `trigger` sends a Next or Completed
-	/// event.
-	func takeUntil<U>(trigger: Observable<U>) -> Observable<T> {
-		return Observable { send in
-			let triggerDisposable = trigger.observe { event in
-				switch event {
-				case let .Error:
-					// Do nothing.
-					break
+	/// Creates an Observable that will always have the same value.
+	@final class func constant(value: T) -> Observable<T> {
+		return Observable { sink in
+			sink.put(value)
+		}
+	}
 
-				default:
-					send(.Completed)
+	/// Resolves all Optional values in the stream, ignoring any that are `nil`.
+	///
+	/// evidence     - Used to prove to the typechecker that the receiver is
+	///                a stream of optionals. Simply pass in the `identity`
+	///                function.
+	/// initialValue - A default value for the returned stream, in case the
+	///                receiver's current value is `nil`, which would otherwise
+	///                result in a null value for the returned stream.
+	@final func ignoreNil<U>(evidence: Observable<T> -> Observable<U?>, initialValue: U) -> Observable<U> {
+		return Observable<U>(initialValue: initialValue) { sink in
+			evidence(self).observe { maybeValue in
+				if let value = maybeValue {
+					sink.put(value)
 				}
 			}
 
-			return CompositeDisposable([triggerDisposable, self.observe(send)])
+			return ()
 		}
 	}
 
-	/// Sends the latest value from the receiver only when `sampler` sends
+	/// Merges an Observable of Observables into a single stream, biased toward
+	/// the Observables added earlier.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver is
+	///            a stream-of-streams. Simply pass in the `identity` function.
+	///
+	/// Returns an Observable that will forward changes from the original streams
+	/// as they arrive, starting with earlier ones.
+	@final func merge<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
+		return Observable<U> { sink in
+			let streams = Atomic<Observable<U>[]>([])
+
+			evidence(self).observe { stream in
+				streams.modify { (var arr) in
+					arr.append(stream)
+					return arr
+				}
+
+				stream.observe(sink)
+			}
+		}
+	}
+
+	/// Switches on an Observable of Observables, forwarding values from the
+	/// latest inner stream.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver is
+	///            a stream-of-streams. Simply pass in the `identity` function.
+	///
+	/// Returns an Observable that will forward changes only from the latest
+	/// Observable sent upon the receiver.
+	@final func switchToLatest<U>(evidence: Observable<T> -> Observable<Observable<U>>) -> Observable<U> {
+		return Observable<U> { sink in
+			let latestDisposable = SerialDisposable()
+
+			evidence(self).observe { stream in
+				latestDisposable.innerDisposable = nil
+				latestDisposable.innerDisposable = stream.observe(sink)
+			}
+		}
+	}
+
+	/// Maps each value in the stream to a new value.
+	@final func map<U>(f: T -> U) -> Observable<U> {
+		return Observable<U> { sink in
+			self.observe { value in sink.put(f(value)) }
+			return ()
+		}
+	}
+
+	/// Combines all the values in the stream, forwarding the result of each
+	/// intermediate combination step.
+	@final func scan<U>(initialValue: U, _ f: (U, T) -> U) -> Observable<U> {
+		let previous = Atomic(initialValue)
+
+		return Observable<U> { sink in
+			self.observe { value in
+				let newValue = f(previous.value, value)
+				sink.put(newValue)
+
+				previous.value = newValue
+			}
+
+			return ()
+		}
+	}
+
+	/// Returns a stream that will yield the first `count` values from the
+	/// receiver, where `count` is greater than zero.
+	@final func take(count: Int) -> Observable<T> {
+		assert(count > 0)
+
+		let soFar = Atomic(0)
+
+		return Observable { sink in
+			let selfDisposable = SerialDisposable()
+
+			selfDisposable.innerDisposable = self.observe { value in
+				let orig = soFar.modify { $0 + 1 }
+				if orig < count {
+					sink.put(value)
+				} else {
+					selfDisposable.dispose()
+				}
+			}
+		}
+	}
+
+	/// Returns a stream that will yield values from the receiver while `pred`
+	/// remains `true`, starting with `initialValue` (in case the predicate
+	/// fails on the receiver's current value).
+	@final func takeWhile(initialValue: T, _ pred: T -> Bool) -> Observable<T> {
+		return Observable(initialValue: initialValue) { sink in
+			let selfDisposable = SerialDisposable()
+
+			selfDisposable.innerDisposable = self.observe { value in
+				if pred(value) {
+					sink.put(value)
+				} else {
+					selfDisposable.dispose()
+				}
+			}
+		}
+	}
+
+	/// Combines each value in the stream with its preceding value, starting
+	/// with `initialValue`.
+	@final func combinePrevious(initialValue: T) -> Observable<(T, T)> {
+		let previous = Atomic(initialValue)
+
+		return Observable<(T, T)> { sink in
+			self.observe { value in
+				let orig = previous.swap(value)
+				sink.put((orig, value))
+			}
+
+			return ()
+		}
+	}
+
+	/// Returns a stream that will replace the first `count` values from the
+	/// receiver with `nil`, then forward everything afterward.
+	@final func skip(count: Int) -> Observable<T?> {
+		let soFar = Atomic(0)
+
+		return skipWhile { _ in
+			let orig = soFar.modify { $0 + 1 }
+			return orig < count
+		}
+	}
+
+	/// Returns a stream that will replace values from the receiver with `nil`
+	/// while `pred` remains `true`, then forward everything afterward.
+	@final func skipWhile(pred: T -> Bool) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { sink in
+			let skipping = Atomic(true)
+
+			self.observe { value in
+				if skipping.value && pred(value) {
+					sink.put(nil)
+				} else {
+					skipping.value = false
+					sink.put(value)
+				}
+			}
+
+			return ()
+		}
+	}
+
+	/// Buffers values yielded by the receiver, preserving them for future
+	/// enumeration.
+	///
+	/// capacity - If not nil, the maximum number of values to buffer. If more
+	///            are received, the earliest values are dropped and won't be
+	///            enumerated over in the future.
+	///
+	/// Returns an Enumerable over the buffered values, and a Disposable which
+	/// can be used to cancel all further buffering.
+	@final func buffer(capacity: Int? = nil) -> (Enumerable<T>, Disposable) {
+		let buffer = EnumerableBuffer<T>(capacity: capacity)
+
+		let observationDisposable = self.observe { value in
+			buffer.put(.Next(Box(value)))
+		}
+
+		let bufferDisposable = ActionDisposable {
+			observationDisposable.dispose()
+
+			// FIXME: This violates the buffer size, since it will now only
+			// contain N - 1 values.
+			buffer.put(.Completed)
+		}
+
+		return (buffer, bufferDisposable)
+	}
+
+	/// Preserves only the values of the stream that pass the given predicate,
+	/// starting with `initialValue` (in case the predicate fails on the
+	/// receiver's current value).
+	@final func filter(initialValue: T, pred: T -> Bool) -> Observable<T> {
+		return Observable(initialValue: initialValue) { sink in
+			self.observe { value in
+				if pred(value) {
+					sink.put(value)
+				}
+			}
+
+			return ()
+		}
+	}
+
+	/// Skips all consecutive, repeating values in the stream, forwarding only
+	/// the first occurrence.
+	///
+	/// evidence - Used to prove to the typechecker that the receiver contains
+	///            values which are `Equatable`. Simply pass in the `identity`
+	///            function.
+	@final func skipRepeats<U: Equatable>(evidence: Observable<T> -> Observable<U>) -> Observable<U> {
+		return Observable<U> { sink in
+			let maybePrevious = Atomic<U?>(nil)
+
+			evidence(self).observe { current in
+				if let previous = maybePrevious.swap(current) {
+					if current == previous {
+						return
+					}
+				}
+
+				sink.put(current)
+			}
+
+			return ()
+		}
+	}
+
+	/// Combines the receiver with the given stream, forwarding the latest
+	/// updates to either.
+	///
+	/// Returns an Observable which will send a new value whenever the receiver
+	/// or `stream` changes.
+	@final func combineLatestWith<U>(stream: Observable<U>) -> Observable<(T, U)> {
+		return Observable<(T, U)> { sink in
+			// FIXME: This implementation is probably racey.
+			self.observe { value in sink.put(value, stream.current) }
+			stream.observe { value in sink.put(self.current, value) }
+		}
+	}
+
+	/// Forwards the current value from the receiver whenever `sampler` sends
 	/// a value.
-	///
-	/// The returned observable could repeat values if `sampler` fires more
-	/// often than the receiver. Values from `sampler` are ignored before the
-	/// receiver sends its first value.
-	func sample<U>(sampler: Observable<U>) -> Observable<T> {
-		return Observable { send in
-			let latest: Atomic<T?> = Atomic(nil)
-
-			let selfDisposable = self.observe { event in
-				switch event {
-				case let .Next(value):
-					latest.value = value
-
-				default:
-					send(event)
-				}
-			}
-
-			let samplerDisposable = sampler.observe { event in
-				switch event {
-				case let .Next:
-					if let v = latest.value {
-						send(.Next(Box(v)))
-					}
-
-				default:
-					break
-				}
-			}
-
-			return CompositeDisposable([selfDisposable, samplerDisposable])
+	@final func sampleOn<U>(sampler: Observable<U>) -> Observable<T> {
+		return Observable { sink in
+			sampler.observe { _ in sink.put(self.current) }
+			return ()
 		}
 	}
 
-	/// Delays the delivery of Next and Completed events by the given interval,
-	/// on the given scheduler.
+	/// Delays values by the given interval, forwarding them on the given
+	/// scheduler.
 	///
-	/// Error events are always forwarded immediately.
-	func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T> {
-		return Observable { send in
-			return self.observe { event in
-				switch event {
-				case let .Error:
-					send(event)
-
-				default:
-					scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) {
-						send(event)
-					}
-				}
-			}
-		}
-	}
-
-	/// Delivers all events onto the given scheduler.
-	func deliverOn(scheduler: Scheduler) -> Observable<T> {
-		return Observable { send in
-			return self.observe { event in
-				scheduler.schedule { send(event) }
+	/// Returns an Observable that will default to `nil`, then send the
+	/// receiver's values after injecting the specified delay.
+	@final func delay(interval: NSTimeInterval, onScheduler scheduler: Scheduler) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { sink in
+			self.observe { value in
+				scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval)) { sink.put(value) }
 				return ()
 			}
+
+			return ()
 		}
 	}
 
-	/// Creates an Observable which will send the latest value from both input
-	/// Observables, whenever either of them fire.
-	func combineLatestWith<U>(other: Observable<U>) -> Observable<(T, U)> {
-		return Observable<(T, U)> { send in
-			let states = Atomic((_CombineState<T>(), _CombineState<U>()))
-
-			func completeIfNecessary() {
-				states.withValue { (a, b) -> () in
-					if a.completed && b.completed {
-						send(.Completed)
-					}
-				}
+	/// Yields all values on the given scheduler, instead of whichever
+	/// scheduler they originally changed upon.
+	///
+	/// Returns an Observable that will default to `nil`, then send the
+	/// receiver's values after being scheduled.
+	@final func deliverOn(scheduler: Scheduler) -> Observable<T?> {
+		return Observable<T?>(initialValue: nil) { sink in
+			self.observe { value in
+				scheduler.schedule { sink.put(value) }
+				return ()
 			}
 
-			let selfDisposable = self.observe { event in
-				switch event {
-				case let .Next(value):
-					states.modify { (_, b) in
-						let av = value
-						if let bv = b.latestValue {
-							let v: (T, U) = (av, bv)
-							send(.Next(Box(v)))
-						}
-
-						return (_CombineState(av, false), b)
-					}
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					states.modify { (a, b) in (_CombineState(a.latestValue, true), b) }
-					completeIfNecessary()
-				}
-			}
-
-			let otherDisposable = other.observe { event in
-				switch event {
-				case let .Next(value):
-					states.modify { (a, _) in
-						let bv = value
-						if let av = a.latestValue {
-							let v: (T, U) = (av, bv)
-							send(.Next(Box(v)))
-						}
-
-						return (a, _CombineState(bv, false))
-					}
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					states.modify { (a, b) in (a, _CombineState(b.latestValue, true)) }
-					completeIfNecessary()
-				}
-			}
-
-			return CompositeDisposable([selfDisposable, otherDisposable])
-		}
-	}
-	
-	/// Creates an Observable which will repeatedly send the current date at the
-	/// given interval, on the given scheduler, starting from the time of observation.
-	class func interval(interval: NSTimeInterval, onScheduler scheduler: RepeatableScheduler, withLeeway leeway: NSTimeInterval = 0) -> Observable<NSDate> {
-		return Observable<NSDate> { send in
-			return scheduler.scheduleAfter(NSDate(timeIntervalSinceNow: interval), repeatingEvery: interval, withLeeway: leeway) {
-				let now = Box(NSDate())
-				send(.Next(now))
-			}
-		}
-	}
-	
-	override class func empty() -> Observable<T> {
-		return Observable { send in
-			send(.Completed)
-			return nil
-		}
-	}
-	
-	override class func single(x: T) -> Observable<T> {
-		return Observable { send in
-			send(.Next(Box(x)))
-			send(.Completed)
-			return nil
+			return ()
 		}
 	}
 
-	override class func error(error: NSError) -> Observable<T> {
-		return Observable { send in
-			send(.Error(error))
-			return nil
+	/// Blocks indefinitely, waiting for the given predicate to be true.
+	///
+	/// Returns the first value that passes.
+	@final func firstPassingTest(pred: T -> Bool) -> T {
+		let cond = NSCondition()
+		cond.name = "com.github.ReactiveCocoa.Observable.firstPassingTest"
+
+		var matchingValue: T? = nil
+		observe { value in
+			if !pred(value) {
+				return
+			}
+
+			withLock(cond) { () -> () in
+				matchingValue = value
+				cond.signal()
+			}
 		}
-	}
 
-	override func flattenScan<S, U>(initial: S, _ f: (S, T) -> (S?, Stream<U>)) -> Observable<U> {
-		return Observable<U> { send in
-			let disposable = CompositeDisposable()
-			let inFlight = Atomic(1)
-
-			// TODO: Thread safety
-			var state = initial
-
-			func decrementInFlight() {
-				let orig = inFlight.modify { $0 - 1 }
-				if orig == 1 {
-					send(.Completed)
-				}
+		return withLock(cond) {
+			while matchingValue == nil {
+				cond.wait()
 			}
 
-			let selfDisposable = SerialDisposable()
-			disposable.addDisposable(selfDisposable)
-
-			selfDisposable.innerDisposable = self.observe { event in
-				switch event {
-				case let .Next(value):
-					let (newState, stream) = f(state, value)
-
-					if let s = newState {
-						state = s
-					} else {
-						selfDisposable.dispose()
-					}
-
-					let streamDisposable = SerialDisposable()
-					disposable.addDisposable(streamDisposable)
-
-					streamDisposable.innerDisposable = (stream as Observable<U>).observe { event in
-						if event.isTerminating {
-							disposable.removeDisposable(streamDisposable)
-						}
-
-						switch event {
-						case let .Completed:
-							decrementInFlight()
-
-						default:
-							send(event)
-						}
-					}
-
-					break
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					decrementInFlight()
-				}
-			}
-
-			return disposable
-		}
-	}
-
-	override func concat(stream: Stream<T>) -> Observable<T> {
-		return Observable { send in
-			let disposable = SerialDisposable()
-
-			disposable.innerDisposable = self.observe { event in
-				switch event {
-				case let .Completed:
-					disposable.innerDisposable = (stream as Observable<T>).observe(send)
-
-				default:
-					send(event)
-				}
-			}
-
-			return disposable
-		}
-	}
-
-	override func zipWith<U>(stream: Stream<U>) -> Observable<(T, U)> {
-		return Observable<(T, U)> { send in
-			let states = Atomic((_ZipState<T>(), _ZipState<U>()))
-
-			func drain() {
-				states.modify { (a, b) in
-					var av = a.values
-					var bv = b.values
-
-					while !av.isEmpty && !bv.isEmpty {
-						let v = (av[0], bv[0])
-						av.removeAtIndex(0)
-						bv.removeAtIndex(0)
-
-						send(.Next(Box(v)))
-					}
-
-					if a.completed || b.completed {
-						send(.Completed)
-					}
-
-					return (_ZipState(av, a.completed), _ZipState(bv, b.completed))
-				}
-			}
-
-			func modifyA(f: _ZipState<T> -> _ZipState<T>) {
-				states.modify { (a, b) in (f(a), b) }
-				drain()
-			}
-
-			func modifyB(f: _ZipState<U> -> _ZipState<U>) {
-				states.modify { (a, b) in (a, f(b)) }
-				drain()
-			}
-
-			let selfDisposable = self.observe { event in
-				switch event {
-				case let .Next(value):
-					modifyA { s in
-						var values = s.values
-						values.append(value)
-
-						return _ZipState(values, false)
-					}
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					modifyA { s in _ZipState(s.values, true) }
-				}
-			}
-
-			let otherDisposable = (stream as Observable<U>).observe { event in
-				switch event {
-				case let .Next(value):
-					modifyB { s in
-						var values = s.values
-						values.append(value)
-
-						return _ZipState(values, false)
-					}
-
-				case let .Error(error):
-					send(.Error(error))
-
-				case let .Completed:
-					modifyB { s in _ZipState(s.values, true) }
-				}
-			}
-
-			return CompositeDisposable([selfDisposable, otherDisposable])
-		}
-	}
-
-	override func materialize() -> Observable<Event<T>> {
-		return Observable<Event<T>> { send in
-			return self.observe { event in
-				send(.Next(Box(event)))
-
-				if event.isTerminating {
-					send(.Completed)
-				}
-			}
+			return matchingValue!
 		}
 	}
 }
